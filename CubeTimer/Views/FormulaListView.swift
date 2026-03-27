@@ -44,3 +44,7 @@ struct FormulaListView: View {
         .navigationTitle("CFOP公式")
     }
 }
+
+#Preview {
+    FormulaListView()
+}

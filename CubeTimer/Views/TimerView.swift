@@ -48,3 +48,7 @@ struct TimerView: View {
         .padding()
     }
 }
+
+#Preview {
+    TimerView()
+}
