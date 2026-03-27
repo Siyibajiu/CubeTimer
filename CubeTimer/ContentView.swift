@@ -1,9 +1,11 @@
 import SwiftUI
 
 struct ContentView: View {
+    @StateObject private var viewModel = TimerViewModel()
+
     var body: some View {
         TabView {
-            TimerView()
+            TimerView(viewModel: viewModel)
                 .tabItem {
                     Image(systemName: "timer")
                     Text("计时器")
@@ -15,9 +17,7 @@ struct ContentView: View {
                     Text("公式")
                 }
 
-            Text("统计功能\n开发中...")
-                .font(.title2)
-                .multilineTextAlignment(.center)
+            StatsView(viewModel: viewModel)
                 .tabItem {
                     Image(systemName: "chart.bar")
                     Text("统计")

@@ -34,16 +34,38 @@ class TimerViewModel: ObservableObject {
         timer?.invalidate()
         timer = nil
 
-        // 保存成绩
-        let solve = Solve(date: Date(), time: currentTime, scramble: currentScramble)
-        solves.insert(solve, at: 0)
-        saveSolves()
+        // 自动保存成绩
+        if currentTime > 0 {
+            let solve = Solve(date: Date(), time: currentTime, scramble: currentScramble)
+            solves.insert(solve, at: 0)
+            saveSolves()
+        }
     }
 
     func reset() {
         stop()
         currentTime = 0
         generateNewScramble()
+    }
+
+    func saveSolve() {
+        guard currentTime > 0 else { return }
+
+        // 创建成绩记录
+        let solve = Solve(
+            date: Date(),
+            time: currentTime,
+            scramble: currentScramble
+        )
+
+        // 添加到列表
+        solves.insert(solve, at: 0)
+
+        // 保存到UserDefaults
+        saveSolves()
+
+        // 重置计时器
+        reset()
     }
 
     func generateNewScramble() {
@@ -68,5 +90,9 @@ class TimerViewModel: ObservableObject {
            let decoded = try? JSONDecoder().decode([Solve].self, from: data) {
             solves = decoded
         }
+    }
+
+    func getRank(for solve: Solve) -> Int {
+        return (solves.firstIndex(where: { $0.id == solve.id }) ?? 0) + 1
     }
 }
