@@ -1,24 +1,30 @@
-//
-//  ContentView.swift
-//  CubeTimer
-//
-//  Created by jamadai on 2026/3/27.
-//
-
 import SwiftUI
 
 struct ContentView: View {
-    var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
-        }
-        .padding()
-    }
-}
+    @State private var selectedTab = 0
 
-#Preview {
-    ContentView()
+    var body: some View {
+        TabView(selection: $selectedTab) {
+            TimerView()
+                .tabItem {
+                    Image(systemName: "timer")
+                    Text("计时器")
+                }
+                .tag(0)
+
+            FormulaListView()
+                .tabItem {
+                    Image(systemName: "list.bullet")
+                    Text("公式")
+                }
+                .tag(1)
+
+            Text("统计功能开发中...")
+                .tabItem {
+                    Image(systemName: "chart.bar")
+                    Text("统计")
+                }
+                .tag(2)
+        }
+    }
 }
