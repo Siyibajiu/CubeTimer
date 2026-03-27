@@ -73,15 +73,12 @@ struct TimerView: View {
         }
         .ignoresSafeArea(.keyboard)
         .alert("保存成绩", isPresented: $showSaveAlert) {
-            Alert(
-                primaryTitle: "保存",
-                secondaryButton: "取消",
-                actions: {
-                    Button("保存") {
-                        viewModel.saveSolve()
-                    }
-                }
-            )
+            Button("保存") {
+                viewModel.saveSolve()
+            }
+            Button("取消", role: .cancel) { }
+        } message: {
+            Text("确定要保存当前成绩吗？")
         }
     }
 }
