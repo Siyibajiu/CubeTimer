@@ -13,4 +13,5 @@ struct Formula: Identifiable, Codable {
     let category: CFOPStage
     let algorithm: String
     let description: String
+    let imageName: String?  // 可选的图片名称
 }

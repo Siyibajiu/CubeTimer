@@ -26,7 +26,7 @@ struct FormulaListView: View {
 
             // 公式列表
             ScrollView {
-                LazyVStack(spacing: 16) {
+                LazyVStack(spacing: 12) {
                     ForEach(filteredFormulas) { formula in
                         FormulaCard(formula: formula)
                     }
@@ -38,64 +38,93 @@ struct FormulaListView: View {
     }
 }
 
-// 公式卡片组件
+// 公式卡片组件 - 左边图片，右边公式
 struct FormulaCard: View {
     let formula: Formula
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // 公式图案
-            CubePatternView(formulaName: formula.name, category: formula.category)
-
-            // 公式名称和分类标签
-            HStack {
-                Text(formula.name)
-                    .font(.headline)
-                    .foregroundColor(.primary)
-
-                Spacer()
-
-                Text(formula.category.rawValue)
-                    .font(.caption2)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(categoryColor(formula.category))
-                    .foregroundColor(.white)
-                    .cornerRadius(6)
+        HStack(alignment: .top, spacing: 12) {
+            // 左边：图片（135x135）
+            if let imageName = formula.imageName {
+                AsyncImage(imageName: imageName) { phase in
+                    switch phase {
+                    case .empty:
+                        ProgressView()
+                            .frame(width: 135, height: 135)
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 135, height: 135)
+                            .clipped()
+                    case .failure(_):
+                        fallbackView
+                    @unknown default:
+                        fallbackView
+                    }
+                }
+            } else {
+                fallbackView
             }
 
-            // 公式算法
-            Text(formula.algorithm)
-                .font(.system(.body, design: .monospaced))
-                .fontWeight(.semibold)
-                .foregroundColor(.blue)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.blue.opacity(0.1))
-                .cornerRadius(8)
+            // 右边：公式内容
+            VStack(alignment: .leading, spacing: 8) {
+                // 公式名称和分类标签
+                HStack {
+                    Text(formula.name)
+                        .font(.headline)
+                        .foregroundColor(.primary)
 
-            // 公式描述
-            Text(formula.description)
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+                    Spacer()
+
+                    Text(formula.category.rawValue)
+                        .font(.caption2)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(categoryColor(formula.category))
+                        .foregroundColor(.white)
+                        .cornerRadius(6)
+                }
+
+                // 公式算法
+                Text(formula.algorithm)
+                    .font(.system(.body, design: .monospaced))
+                    .fontWeight(.semibold)
+                    .foregroundColor(.blue)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color.blue.opacity(0.1))
+                    .cornerRadius(8)
+
+                // 公式描述
+                Text(formula.description)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .padding()
         .background(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: 12)
                 .fill(Color(.systemBackground))
-                .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
+                .shadow(color: .black.opacity(0.08), radius: 5, x: 0, y: 2)
         )
     }
 
-    private var gradientColor: Color {
-        switch formula.category {
-        case .cross: return .green
-        case .f2l: return .blue
-        case .oll: return .orange
-        case .pll: return .purple
-        }
+    private var fallbackView: some View {
+        RoundedRectangle(cornerRadius: 8)
+            .fill(Color.gray.opacity(0.2))
+            .frame(width: 135, height: 135)
+            .overlay(
+                VStack {
+                    Image(systemName: "cube.fill")
+                        .font(.system(size: 40))
+                        .foregroundColor(.gray)
+                    Text("暂无图片")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+            )
     }
 
     private func categoryColor(_ category: CFOPStage) -> Color {
@@ -105,6 +134,31 @@ struct FormulaCard: View {
         case .oll: return .orange
         case .pll: return .purple
         }
+    }
+}
+
+// 异步加载本地图片
+struct AsyncImage: View {
+    let imageName: String
+    let content: (AsyncImagePhase) -> AnyView
+
+    init<Content>(imageName: String, @ViewBuilder content: @escaping (AsyncImagePhase) -> Content) where Content: View {
+        self.imageName = imageName
+        self.content = { phase in AnyView(content(phase)) }
+    }
+
+    var body: some View {
+        if let image = UIImage(named: imageName) {
+            content(.success(Image(uiImage: image)))
+        } else {
+            content(.empty)
+        }
+    }
+
+    enum AsyncImagePhase {
+        case empty
+        case success(Image)
+        case failure(Error)
     }
 }
 
