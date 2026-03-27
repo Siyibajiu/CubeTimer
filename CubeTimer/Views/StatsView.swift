@@ -17,10 +17,6 @@ struct StatsView: View {
         return sorted
     }
 
-    init(viewModel: TimerViewModel) {
-        self.viewModel = viewModel
-    }
-
     var body: some View {
         VStack(spacing: 0) {
             // 顶部：排序控制
