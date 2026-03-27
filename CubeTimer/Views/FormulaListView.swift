@@ -3,13 +3,7 @@ import SwiftUI
 struct FormulaListView: View {
     @State private var selectedCategory: CFOPStage = .cross
 
-    // 示例数据
-    private let formulas: [Formula] = [
-        Formula(name: "底层十字基础", category: .cross, algorithm: "R U R' U'", description: "基础复原公式"),
-        Formula(name: "F2L基础", category: .f2l, algorithm: "R U R'", description: "前两层复原"),
-        Formula(name: "OLL公式1", category: .oll, algorithm: "R U R' U R U2 R'", description: "顶层定向"),
-        Formula(name: "PLL公式1", category: .pll, algorithm: "R U R' F' R U R' U' R' F R2 U' R'", description: "顶层排列"),
-    ]
+    private let formulas: [Formula] = FormulaData.shared.getAllFormulas()
 
     private var filteredFormulas: [Formula] {
         formulas.filter { $0.category == selectedCategory }
@@ -26,20 +20,37 @@ struct FormulaListView: View {
             .pickerStyle(.segmented)
             .padding()
 
+            // 公式数量
+            Text("共 \(filteredFormulas.count) 个公式")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .padding(.bottom, 8)
+
             // 公式列表
             List(filteredFormulas) { formula in
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 12) {
+                    // 公式名称
                     Text(formula.name)
                         .font(.headline)
+                        .foregroundColor(.primary)
+
+                    // 公式算法
                     Text(formula.algorithm)
                         .font(.system(.body, design: .monospaced))
                         .foregroundColor(.blue)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(Color.blue.opacity(0.1))
+                        .cornerRadius(8)
+
+                    // 公式描述
                     Text(formula.description)
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
                 .padding(.vertical, 4)
             }
+            .listStyle(.plain)
         }
         .navigationTitle("CFOP公式")
     }

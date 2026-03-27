@@ -15,9 +15,9 @@ struct ContentView: View {
                     Text("公式")
                 }
 
-            Text("统计功能开发中...")
-                .font(.title)
-                .foregroundColor(.secondary)
+            Text("统计功能\n开发中...")
+                .font(.title2)
+                .multilineTextAlignment(.center)
                 .tabItem {
                     Image(systemName: "chart.bar")
                     Text("统计")
