@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 class PracticeViewModel: ObservableObject {
     @Published var currentFormula: Formula?
@@ -47,8 +48,9 @@ class PracticeViewModel: ObservableObject {
     }
 
     func toggleMastered(_ formula: Formula) {
-        if practiceData[formula.id] != nil {
-            practiceData[formula.id]?.isMastered.toggle()
+        if var data = practiceData[formula.id] {
+            data.isMastered.toggle()
+            practiceData[formula.id] = data
         } else {
             practiceData[formula.id] = FormulaPractice(formulaId: formula.id, isMastered: true, practiceCount: 0, lastPracticed: nil)
         }
@@ -64,9 +66,10 @@ class PracticeViewModel: ObservableObject {
     }
 
     private func incrementPracticeCount(_ formulaId: UUID) {
-        if practiceData[formulaId] != nil {
-            practiceData[formulaId]?.practiceCount += 1
-            practiceData[formulaId]?.lastPracticed = Date()
+        if var data = practiceData[formulaId] {
+            data.practiceCount += 1
+            data.lastPracticed = Date()
+            practiceData[formulaId] = data
         } else {
             practiceData[formulaId] = FormulaPractice(formulaId: formulaId, isMastered: false, practiceCount: 1, lastPracticed: Date())
         }
