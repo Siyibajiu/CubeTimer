@@ -64,17 +64,7 @@ struct FormulaListView: View {
             }
         }
         .sheet(isPresented: $showPractice) {
-            NavigationView {
-                FormulaPracticeView()
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .navigationBarTrailing) {
-                            Button("完成") {
-                                showPractice = false
-                            }
-                        }
-                    }
-            }
+            FormulaPracticeView()
         }
     }
 }

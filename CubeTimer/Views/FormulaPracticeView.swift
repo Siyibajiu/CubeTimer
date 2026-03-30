@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct FormulaPracticeView: View {
+    @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = PracticeViewModel()
     @State private var showAlgorithm = false
     @State private var selectedCategory: CFOPStage? = nil
@@ -11,11 +12,111 @@ struct FormulaPracticeView: View {
     @State private var isCorrect = false
 
     var body: some View {
+        NavigationView {
+            VStack(spacing: 0) {
+                // 顶部：模式切换
+                VStack(spacing: 12) {
+                    // 模式切换
+                    Picker("", selection: $quizMode) {
+                        Text("学习模式").tag(false)
+                        Text("答题模式").tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal)
+
+                    // 分类筛选
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 10) {
+                            CategoryButton(title: "全部", isSelected: selectedCategory == nil) {
+                                selectedCategory = nil
+                                viewModel.loadFormulas(category: nil)
+                                resetQuiz()
+                            }
+
+                            ForEach(CFOPStage.allCases, id: \.self) { stage in
+                                CategoryButton(title: stage.rawValue, isSelected: selectedCategory == stage) {
+                                    selectedCategory = stage
+                                    viewModel.loadFormulas(category: stage)
+                                    resetQuiz()
+                                }
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
+                }
+                .padding(.vertical)
+                .background(Color.gray.opacity(0.1))
+
+                // 主内容区
+                if let currentFormula = viewModel.currentFormula {
+                    if quizMode {
+                        // 答题模式
+                        QuizModeView(
+                            formula: currentFormula,
+                            options: quizOptions,
+                            selectedAnswer: $selectedAnswer,
+                            showResult: showResult,
+                            isCorrect: isCorrect,
+                            onAnswer: { answer in
+                                checkAnswer(answer, correct: currentFormula)
+                            },
+                            onNext: {
+                                nextQuiz()
+                            }
+                        )
+                    } else {
+                        // 学习模式
+                        StudyModeView(
+                            formula: currentFormula,
+                            showAlgorithm: showAlgorithm,
+                            viewModel: viewModel,
+                            onToggleAlgorithm: {
+                                withAnimation {
+                                    showAlgorithm.toggle()
+                                }
+                            },
+                            onNext: {
+                                withAnimation {
+                                    showAlgorithm = false
+                                    viewModel.nextFormula()
+                                }
+                            }
+                        )
+                    }
+                } else {
+                    VStack(spacing: 20) {
+                        Spacer()
+                        Image(systemName: "questionmark.circle")
+                            .font(.system(size: 60))
+                            .foregroundColor(.gray)
+                        Text("没有可练习的公式")
+                            .font(.title3)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                    }
+                }
+            }
+            .navigationTitle("公式练习")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("完成") {
+                        dismiss()
+                    }
+                }
+            }
+            .onChange(of: quizMode) { oldValue, newValue in
+                if newValue && !oldValue {
+                    generateQuiz()
+                }
+            }
+        }
+    }
         VStack(spacing: 0) {
-            // 顶部：模式切换和分类筛选
-            VStack(spacing: 10) {
+            // 顶部：模式切换
+            VStack(spacing: 12) {
                 // 模式切换
-                Picker("练习模式", selection: $quizMode) {
+                Picker("", selection: $quizMode) {
                     Text("学习模式").tag(false)
                     Text("答题模式").tag(true)
                 }
@@ -94,9 +195,8 @@ struct FormulaPracticeView: View {
                 }
             }
         }
-        .navigationTitle("公式练习")
-        .onChange(of: quizMode) { _, newValue in
-            if newValue {
+        .onChange(of: quizMode) { oldValue, newValue in
+            if newValue && !oldValue {
                 generateQuiz()
             }
         }
