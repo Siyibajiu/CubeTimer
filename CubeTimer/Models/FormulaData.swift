@@ -7,11 +7,6 @@ class FormulaData {
 
     func getAllFormulas() -> [Formula] {
         return [
-            // Cross 公式
-            Formula(name: "F2", category: .cross, algorithm: "F2", description: "白色棱块在前面顶层位置，需要直接转到底层", imageName: nil),
-            Formula(name: "R' F R", category: .cross, algorithm: "R' F R", description: "白色棱块在顶层右前位置，需要插入到前底层", imageName: nil),
-            Formula(name: "R' F R F'", category: .cross, algorithm: "R' F R F'", description: "棱块在正确位置但方向错误（白色朝侧面）", imageName: nil),
-            Formula(name: "U R' F R", category: .cross, algorithm: "U R' F R", description: "棱块和目标位置不在同一面", imageName: nil),
 
             // F2L 公式
             Formula(name: "基础配对", category: .f2l, algorithm: "U R U' R'", description: "最简单的情况，角块和棱块已经在顶层配对", imageName: nil),

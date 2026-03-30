@@ -1,7 +1,6 @@
 import Foundation
 
 enum CFOPStage: String, CaseIterable, Codable {
-    case cross = "Cross"
     case f2l = "F2L"
     case oll = "OLL"
     case pll = "PLL"

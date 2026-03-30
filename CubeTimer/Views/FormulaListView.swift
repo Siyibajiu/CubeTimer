@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct FormulaListView: View {
-    @State private var selectedCategory: CFOPStage = .cross
+    @State private var selectedCategory: CFOPStage = .f2l
     @State private var showPractice = false
 
     private let formulas: [Formula] = CompleteFormulaData.shared.getAllFormulas()
@@ -160,7 +160,6 @@ struct FormulaCard: View {
 
     private func categoryColor(_ category: CFOPStage) -> Color {
         switch category {
-        case .cross: return .green
         case .f2l: return .blue
         case .oll: return .orange
         case .pll: return .purple

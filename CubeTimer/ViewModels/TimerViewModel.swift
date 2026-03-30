@@ -35,9 +35,7 @@ class TimerViewModel: ObservableObject {
         timer = nil
     }
 
-    func reset() {
-        stop()
-        currentTime = 0
+    func newScramble() {
         generateNewScramble()
     }
 
@@ -58,7 +56,9 @@ class TimerViewModel: ObservableObject {
         saveSolves()
 
         // 重置计时器
-        reset()
+        stop()
+        currentTime = 0
+        generateNewScramble()
     }
 
     func generateNewScramble() {
