@@ -170,10 +170,9 @@ struct StudyModeView: View {
     let onNext: () -> Void
 
     var body: some View {
-        VStack(spacing: 20) {
-            Spacer().frame(height: 20)
-
-            // 公式图片
+        ScrollView {
+            VStack(spacing: 20) {
+                // 公式图片
             if let imageName = formula.imageName {
                 LocalAsyncImage(imageName: imageName) { phase in
                     switch phase {
@@ -313,10 +312,9 @@ struct QuizModeView: View {
     let onNext: () -> Void
 
     var body: some View {
-        VStack(spacing: 20) {
-            Spacer().frame(height: 20)
-
-            // 提示文字
+        ScrollView {
+            VStack(spacing: 20) {
+                // 提示文字
             VStack(spacing: 8) {
                 Text("请选择正确的算法")
                     .font(.title2)
