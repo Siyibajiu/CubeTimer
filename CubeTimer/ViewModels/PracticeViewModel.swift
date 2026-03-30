@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import Combine
 
 class PracticeViewModel: ObservableObject {
     @Published var currentFormula: Formula?
