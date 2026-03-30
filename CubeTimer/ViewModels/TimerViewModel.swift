@@ -33,13 +33,6 @@ class TimerViewModel: ObservableObject {
         isRunning = false
         timer?.invalidate()
         timer = nil
-
-        // 自动保存成绩
-        if currentTime > 0 {
-            let solve = Solve(date: Date(), time: currentTime, scramble: currentScramble)
-            solves.insert(solve, at: 0)
-            saveSolves()
-        }
     }
 
     func reset() {
@@ -101,5 +94,31 @@ class TimerViewModel: ObservableObject {
             solves.remove(at: index)
             saveSolves()
         }
+    }
+
+    // MARK: - 统计数据
+    var pb: TimeInterval? {
+        solves.map { $0.time }.min()
+    }
+
+    var ao5: TimeInterval? {
+        guard solves.count >= 5 else { return nil }
+        let recent5 = Array(solves.prefix(5))
+        let times = recent5.map { $0.time }.sorted()
+        let trimmed = times.dropFirst().dropLast()
+        return trimmed.reduce(0, +) / Double(trimmed.count)
+    }
+
+    var ao12: TimeInterval? {
+        guard solves.count >= 12 else { return nil }
+        let recent12 = Array(solves.prefix(12))
+        let times = recent12.map { $0.time }.sorted()
+        let trimmed = times.dropFirst().dropLast()
+        return trimmed.reduce(0, +) / Double(trimmed.count)
+    }
+
+    var average: TimeInterval? {
+        guard !solves.isEmpty else { return nil }
+        return solves.reduce(0) { $0 + $1.time } / Double(solves.count)
     }
 }

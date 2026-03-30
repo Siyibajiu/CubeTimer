@@ -19,7 +19,50 @@ struct StatsView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // 顶部：排序控制
+            // 顶部：统计数据卡片
+            VStack(spacing: 12) {
+                HStack {
+                    Text("成绩统计")
+                        .font(.title2)
+                        .bold()
+
+                    Spacer()
+
+                    Text("共 \(viewModel.solves.count) 条记录")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .padding()
+
+                // 统计数据网格
+                HStack(spacing: 12) {
+                    // PB
+                    StatCard(
+                        title: "PB",
+                        value: viewModel.pb.map { viewModel.formattedTime($0) } ?? "--:--.---",
+                        color: .yellow
+                    )
+
+                    // Ao5
+                    StatCard(
+                        title: "Ao5",
+                        value: viewModel.ao5.map { viewModel.formattedTime($0) } ?? "需5次",
+                        color: .blue
+                    )
+
+                    // Ao12
+                    StatCard(
+                        title: "Ao12",
+                        value: viewModel.ao12.map { viewModel.formattedTime($0) } ?? "需12次",
+                        color: .green
+                    )
+                }
+                .padding(.horizontal)
+            }
+            .padding(.vertical)
+            .background(Color.gray.opacity(0.05))
+
+            // 排序控制
             VStack(spacing: 12) {
                 HStack {
                     Text("成绩统计")
@@ -103,6 +146,33 @@ enum SortOption: CaseIterable {
         case .date: return "日期"
         case .time: return "用时"
         }
+    }
+}
+
+// 统计卡片组件
+struct StatCard: View {
+    let title: String
+    let value: String
+    let color: Color
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Text(title)
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            Text(value)
+                .font(.system(.title3, design: .monospaced))
+                .fontWeight(.bold)
+                .foregroundColor(color)
+        }
+        .frame(maxWidth: .infinity)
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.systemBackground))
+                .shadow(color: .black.opacity(0.05), radius: 3, x: 0, y: 1)
+        )
     }
 }
 
