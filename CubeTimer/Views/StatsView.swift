@@ -74,6 +74,15 @@ struct StatsView: View {
                     LazyVStack(spacing: 8) {
                         ForEach(sortedSolves) { solve in
                             SolveCard(solve: solve, viewModel: viewModel)
+                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                    Button(role: .destructive) {
+                                        withAnimation {
+                                            viewModel.deleteSolve(solve)
+                                        }
+                                    } label: {
+                                        Label("删除", systemImage: "trash")
+                                    }
+                                }
                         }
                     }
                     .padding()

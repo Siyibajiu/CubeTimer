@@ -95,4 +95,11 @@ class TimerViewModel: ObservableObject {
     func getRank(for solve: Solve) -> Int {
         return (solves.firstIndex(where: { $0.id == solve.id }) ?? 0) + 1
     }
+
+    func deleteSolve(_ solve: Solve) {
+        if let index = solves.firstIndex(where: { $0.id == solve.id }) {
+            solves.remove(at: index)
+            saveSolves()
+        }
+    }
 }
