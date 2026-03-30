@@ -2,6 +2,7 @@ import SwiftUI
 
 struct FormulaListView: View {
     @State private var selectedCategory: CFOPStage = .cross
+    @State private var showPractice = false
 
     private let formulas: [Formula] = CompleteFormulaData.shared.getAllFormulas()
 
@@ -35,6 +36,33 @@ struct FormulaListView: View {
             }
         }
         .navigationTitle("CFOP公式")
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: {
+                    showPractice = true
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "brain.head.profile")
+                        Text("练习")
+                    }
+                    .font(.body)
+                    .foregroundColor(.blue)
+                }
+            }
+        }
+        .sheet(isPresented: $showPractice) {
+            NavigationView {
+                FormulaPracticeView()
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            Button("完成") {
+                                showPractice = false
+                            }
+                        }
+                    }
+            }
+        }
     }
 }
 

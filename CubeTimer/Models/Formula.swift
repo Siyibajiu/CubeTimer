@@ -14,4 +14,7 @@ struct Formula: Identifiable, Codable {
     let algorithm: String
     let description: String
     let imageName: String?  // 可选的图片名称
+    var isMastered: Bool = false
+    var practiceCount: Int = 0
+    var lastPracticed: Date?
 }
