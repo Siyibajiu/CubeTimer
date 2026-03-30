@@ -10,12 +10,18 @@ class ScrambleGenerator {
 
         for _ in 0..<length {
             var move: String
+            var attempts = 0
+            let maxAttempts = 100
 
             repeat {
-                let baseMove = moves.randomElement()!
-                let modifier = modifiers.randomElement()!
+                // 使用更安全的随机数生成方式
+                let randomMoveIndex = Int.random(in: 0..<moves.count)
+                let randomModifierIndex = Int.random(in: 0..<modifiers.count)
+                let baseMove = moves[randomMoveIndex]
+                let modifier = modifiers[randomModifierIndex]
                 move = baseMove + modifier
-            } while move.hasPrefix(lastMove)
+                attempts += 1
+            } while move.hasPrefix(lastMove) && attempts < maxAttempts
 
             scramble.append(move)
             lastMove = String(move.prefix(1))
