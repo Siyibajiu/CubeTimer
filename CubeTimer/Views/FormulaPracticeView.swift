@@ -14,8 +14,18 @@ struct FormulaPracticeView: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // 顶部：模式切换
-                VStack(spacing: 12) {
+                // 顶部标题栏
+                HStack {
+                    Text("公式练习")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                    Spacer()
+                }
+                .padding()
+                .background(Color.gray.opacity(0.05))
+
+                // 模式切换
+                VStack(spacing: 16) {
                     // 模式切换
                     Picker("", selection: $quizMode) {
                         Text("学习模式").tag(false)
@@ -26,7 +36,7 @@ struct FormulaPracticeView: View {
 
                     // 分类筛选
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 10) {
+                        HStack(spacing: 8) {
                             CategoryButton(title: "全部", isSelected: selectedCategory == nil) {
                                 selectedCategory = nil
                                 viewModel.loadFormulas(category: nil)
@@ -41,10 +51,11 @@ struct FormulaPracticeView: View {
                                 }
                             }
                         }
-                        .padding(.horizontal)
+                        .padding(.horizontal, 16)
                     }
                 }
-                .padding(.vertical)
+                .padding(.top, 8)
+                .padding(.bottom, 12)
                 .background(Color.gray.opacity(0.1))
 
                 // 主内容区
@@ -96,7 +107,6 @@ struct FormulaPracticeView: View {
                     }
                 }
             }
-            .navigationTitle("公式练习")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -161,7 +171,7 @@ struct StudyModeView: View {
 
     var body: some View {
         VStack(spacing: 20) {
-            Spacer()
+            Spacer().frame(height: 20)
 
             // 公式图片
             if let imageName = formula.imageName {
@@ -304,7 +314,7 @@ struct QuizModeView: View {
 
     var body: some View {
         VStack(spacing: 20) {
-            Spacer()
+            Spacer().frame(height: 20)
 
             // 提示文字
             VStack(spacing: 8) {
