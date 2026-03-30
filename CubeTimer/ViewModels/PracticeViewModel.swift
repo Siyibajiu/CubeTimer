@@ -2,7 +2,8 @@ import Foundation
 
 class PracticeViewModel: ObservableObject {
     @Published var currentFormula: Formula?
-    @Published var formulas: [Formula] = []
+    @Published var practiceData: [UUID: FormulaPractice] = [:]
+    private var formulas: [Formula] = []
     private var currentIndex = 0
 
     init() {
@@ -37,7 +38,7 @@ class PracticeViewModel: ObservableObject {
 
         // 标记当前公式已练习
         if let current = currentFormula {
-            incrementPracticeCount(current)
+            incrementPracticeCount(current.id)
         }
 
         // 移动到下一个
@@ -46,45 +47,43 @@ class PracticeViewModel: ObservableObject {
     }
 
     func toggleMastered(_ formula: Formula) {
-        if let index = formulas.firstIndex(where: { $0.id == formula.id }) {
-            formulas[index].isMastered.toggle()
-            currentFormula = formulas[index]
-            savePracticeProgress()
+        if practiceData[formula.id] != nil {
+            practiceData[formula.id]?.isMastered.toggle()
+        } else {
+            practiceData[formula.id] = FormulaPractice(formulaId: formula.id, isMastered: true, practiceCount: 0, lastPracticed: nil)
         }
+        savePracticeProgress()
     }
 
-    private func incrementPracticeCount(_ formula: Formula) {
-        if let index = formulas.firstIndex(where: { $0.id == formula.id }) {
-            formulas[index].practiceCount += 1
-            formulas[index].lastPracticed = Date()
-            savePracticeProgress()
+    func getPracticeCount(for formula: Formula) -> Int {
+        return practiceData[formula.id]?.practiceCount ?? 0
+    }
+
+    func isMastered(_ formula: Formula) -> Bool {
+        return practiceData[formula.id]?.isMastered ?? false
+    }
+
+    private func incrementPracticeCount(_ formulaId: UUID) {
+        if practiceData[formulaId] != nil {
+            practiceData[formulaId]?.practiceCount += 1
+            practiceData[formulaId]?.lastPracticed = Date()
+        } else {
+            practiceData[formulaId] = FormulaPractice(formulaId: formulaId, isMastered: false, practiceCount: 1, lastPracticed: Date())
         }
+        savePracticeProgress()
     }
 
     private func savePracticeProgress() {
-        let progress = PracticeProgress(formulas: formulas)
-        if let data = try? JSONEncoder().encode(progress) {
+        let progressList = Array(practiceData.values)
+        if let data = try? JSONEncoder().encode(progressList) {
             UserDefaults.standard.set(data, forKey: "formulaPracticeProgress")
         }
     }
 
     private func loadPracticeProgress() {
         if let data = UserDefaults.standard.data(forKey: "formulaPracticeProgress"),
-           let decoded = try? JSONDecoder().decode(PracticeProgress.self, from: data) {
-            let progressMap = Dictionary(uniqueKeysWithValues: decoded.formulas.map { ($0.id, $0) })
-
-            for index in formulas.indices {
-                if let progress = progressMap[formulas[index].id] {
-                    formulas[index].isMastered = progress.isMastered
-                    formulas[index].practiceCount = progress.practiceCount
-                    formulas[index].lastPracticed = progress.lastPracticed
-                }
-            }
+           let decoded = try? JSONDecoder().decode([FormulaPractice].self, from: data) {
+            practiceData = Dictionary(uniqueKeysWithValues: decoded.map { ($0.formulaId, $0) })
         }
     }
-}
-
-// 练习进度数据结构
-struct PracticeProgress: Codable {
-    let formulas: [Formula]
 }

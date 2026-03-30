@@ -14,6 +14,11 @@ struct Formula: Identifiable, Codable {
     let algorithm: String
     let description: String
     let imageName: String?  // 可选的图片名称
+}
+
+// 练习进度数据（单独存储）
+struct FormulaPractice: Codable {
+    let formulaId: UUID
     var isMastered: Bool = false
     var practiceCount: Int = 0
     var lastPracticed: Date?

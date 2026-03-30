@@ -92,8 +92,8 @@ struct FormulaPracticeView: View {
 
                     // 统计信息
                     HStack(spacing: 20) {
-                        StatItem(label: "练习次数", value: "\(currentFormula.practiceCount)")
-                        StatItem(label: "掌握状态", value: currentFormula.isMastered ? "已掌握" : "练习中")
+                        StatItem(label: "练习次数", value: "\(viewModel.getPracticeCount(for: currentFormula))")
+                        StatItem(label: "掌握状态", value: viewModel.isMastered(currentFormula) ? "已掌握" : "练习中")
                     }
 
                     Spacer()
@@ -120,14 +120,14 @@ struct FormulaPracticeView: View {
                             viewModel.toggleMastered(currentFormula)
                         }) {
                             HStack {
-                                Image(systemName: currentFormula.isMastered ? "checkmark.circle.fill" : "circle")
-                                Text(currentFormula.isMastered ? "已掌握" : "标记为已掌握")
+                                Image(systemName: viewModel.isMastered(currentFormula) ? "checkmark.circle.fill" : "circle")
+                                Text(viewModel.isMastered(currentFormula) ? "已掌握" : "标记为已掌握")
                             }
                             .font(.title3)
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(currentFormula.isMastered ? Color.green : Color.gray)
+                            .background(viewModel.isMastered(currentFormula) ? Color.green : Color.gray)
                             .cornerRadius(12)
                         }
 
