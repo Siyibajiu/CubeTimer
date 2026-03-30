@@ -16,6 +16,33 @@ struct FormulaListView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            // 顶部：练习按钮
+            HStack {
+                Text("CFOP公式")
+                    .font(.title2)
+                    .bold()
+
+                Spacer()
+
+                Button(action: {
+                    showPractice = true
+                }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "brain.head.profile")
+                        Text("练习模式")
+                    }
+                    .font(.body)
+                    .fontWeight(.medium)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color.blue)
+                    .cornerRadius(20)
+                }
+            }
+            .padding()
+            .background(Color.gray.opacity(0.1))
+
             // 分类选择
             Picker("分类", selection: $selectedCategory) {
                 ForEach(CFOPStage.allCases, id: \.self) { stage in
@@ -23,7 +50,8 @@ struct FormulaListView: View {
                 }
             }
             .pickerStyle(.segmented)
-            .padding()
+            .padding(.horizontal)
+            .padding(.bottom)
 
             // 公式列表
             ScrollView {
@@ -33,21 +61,6 @@ struct FormulaListView: View {
                     }
                 }
                 .padding()
-            }
-        }
-        .navigationTitle("CFOP公式")
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: {
-                    showPractice = true
-                }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "brain.head.profile")
-                        Text("练习")
-                    }
-                    .font(.body)
-                    .foregroundColor(.blue)
-                }
             }
         }
         .sheet(isPresented: $showPractice) {
