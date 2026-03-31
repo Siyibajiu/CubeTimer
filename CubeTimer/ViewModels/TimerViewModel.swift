@@ -11,6 +11,12 @@ class TimerViewModel: ObservableObject {
     private let scrambler = ScrambleGenerator()
     @Published var currentScramble = ""
 
+    // 观察时间相关
+    @Published var inspectionTime: Int = 15
+    @Published var isInspecting = false
+    @Published var isReadyAfterInspection = false
+    private var inspectionTimer: Timer?
+
     init() {
         loadSolves()
         generateNewScramble()
@@ -18,6 +24,7 @@ class TimerViewModel: ObservableObject {
 
     func start() {
         guard !isRunning else { return }
+        isReadyAfterInspection = false
         isRunning = true
         startTime = Date()
 
@@ -33,6 +40,38 @@ class TimerViewModel: ObservableObject {
         isRunning = false
         timer?.invalidate()
         timer = nil
+    }
+
+    // MARK: - 观察时间
+    func startInspection() {
+        guard !isRunning && !isInspecting else { return }
+        isInspecting = true
+        isReadyAfterInspection = false
+        inspectionTime = 15
+
+        inspectionTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
+            if self.inspectionTime > 0 {
+                self.inspectionTime -= 1
+            } else {
+                self.endInspection()
+            }
+        }
+    }
+
+    func endInspection() {
+        isInspecting = false
+        inspectionTimer?.invalidate()
+        inspectionTimer = nil
+        isReadyAfterInspection = true
+    }
+
+    func cancelInspection() {
+        isInspecting = false
+        inspectionTimer?.invalidate()
+        inspectionTimer = nil
+        isReadyAfterInspection = false
+        inspectionTime = 15
     }
 
     func newScramble() {
@@ -55,9 +94,10 @@ class TimerViewModel: ObservableObject {
         // 保存到UserDefaults
         saveSolves()
 
-        // 重置计时器
+        // 重置计时器和观察状态
         stop()
         currentTime = 0
+        cancelInspection()
         generateNewScramble()
     }
 
@@ -120,5 +160,38 @@ class TimerViewModel: ObservableObject {
     var average: TimeInterval? {
         guard !solves.isEmpty else { return nil }
         return solves.reduce(0) { $0 + $1.time } / Double(solves.count)
+    }
+
+    // MARK: - 练习活跃度数据
+    func getSolvesByDay() -> [String: [Solve]] {
+        let calendar = Calendar.current
+        var daySolves: [String: [Solve]] = [:]
+
+        for solve in solves {
+            let dayKey = calendar.startOfDay(for: solve.date)
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            formatter.timeZone = TimeZone.current  // 确保使用当前时区
+            let dayString = formatter.string(from: dayKey)
+
+            if daySolves[dayString] == nil {
+                daySolves[dayString] = []
+            }
+            daySolves[dayString]?.append(solve)
+        }
+
+        return daySolves
+    }
+
+    func getSolvesForDate(_ date: Date) -> [Solve] {
+        let calendar = Calendar.current
+        let targetDay = calendar.startOfDay(for: date)
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.timeZone = TimeZone.current
+        let targetString = formatter.string(from: targetDay)
+
+        let daySolves = getSolvesByDay()
+        return daySolves[targetString] ?? []
     }
 }
