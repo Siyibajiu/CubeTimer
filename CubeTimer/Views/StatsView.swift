@@ -2,6 +2,7 @@ import SwiftUI
 
 struct StatsView: View {
     @ObservedObject var viewModel: TimerViewModel
+    @State private var viewMode: StatsViewMode = .list
     @State private var sortBy: SortOption = .date
     @State private var sortOrder: SortOrder = .descending
     @State private var selectedDate: Date?
@@ -61,64 +62,24 @@ struct StatsView: View {
                 .padding(.vertical)
                 .background(Color.gray.opacity(0.05))
 
-                // 练习活跃度热力图
-                ActivityHeatMap(
-                    viewModel: viewModel,
-                    selectedDate: $selectedDate,
-                    showDayDetail: $showDayDetail
-                )
-                .padding(.horizontal)
-                .padding(.vertical)
-
-                // 排序控制（吸顶）
-                HStack(spacing: 12) {
-                    Picker("排序方式", selection: $sortBy) {
-                        ForEach(SortOption.allCases, id: \.self) { option in
-                            Text(option.displayName).tag(option)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-
-                    Button(action: {
-                        sortOrder.toggle()
-                    }) {
-                        Image(systemName: sortOrder == .ascending ? "arrow.up" : "arrow.down")
-                            .foregroundColor(.blue)
+                // 视图模式切换
+                Picker("View Mode", selection: $viewMode) {
+                    ForEach(StatsViewMode.allCases, id: \.self) { mode in
+                        Text(mode.rawValue).tag(mode)
                     }
                 }
+                .pickerStyle(.segmented)
                 .padding(.horizontal)
-                .padding(.vertical, 12)
-                .background(Color(.systemBackground))
+                .padding(.bottom)
 
-                // 成绩列表内容
-                if viewModel.solves.isEmpty {
-                    VStack(spacing: 16) {
-                        Image(systemName: "chart.bar")
-                            .font(.system(size: 60))
-                            .foregroundColor(.gray)
-                        Text("还没有记录")
-                            .font(.title3)
-                            .foregroundColor(.secondary)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 50)
-                } else {
-                    LazyVStack(spacing: 8) {
-                        ForEach(sortedSolves) { solve in
-                            SolveCard(solve: solve, viewModel: viewModel)
-                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                    Button(role: .destructive) {
-                                        withAnimation {
-                                            viewModel.deleteSolve(solve)
-                                        }
-                                    } label: {
-                                        Label("删除", systemImage: "trash")
-                                    }
-                                }
-                        }
-                    }
-                    .padding()
-                    .padding(.bottom)
+                // 根据选择的模式显示不同内容
+                switch viewMode {
+                case .list:
+                    listView
+                case .heatmap:
+                    heatmapView
+                case .trend:
+                    trendView
                 }
             }
         }
@@ -130,9 +91,90 @@ struct StatsView: View {
             }
         }
     }
+
+    // MARK: - 列表视图
+    private var listView: some View {
+        VStack(spacing: 0) {
+            // 排序控制
+            HStack(spacing: 12) {
+                Picker("排序方式", selection: $sortBy) {
+                    ForEach(SortOption.allCases, id: \.self) { option in
+                        Text(option.displayName).tag(option)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                Button(action: {
+                    sortOrder.toggle()
+                }) {
+                    Image(systemName: sortOrder == .ascending ? "arrow.up" : "arrow.down")
+                        .foregroundColor(.blue)
+                }
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 12)
+            .background(Color(.systemBackground))
+
+            // 成绩列表内容
+            if viewModel.solves.isEmpty {
+                VStack(spacing: 16) {
+                    Image(systemName: "chart.bar")
+                        .font(.system(size: 60))
+                        .foregroundColor(.gray)
+                    Text("还没有记录")
+                        .font(.title3)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 50)
+            } else {
+                LazyVStack(spacing: 8) {
+                    ForEach(sortedSolves) { solve in
+                        SolveCard(solve: solve, viewModel: viewModel)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    withAnimation {
+                                        viewModel.deleteSolve(solve)
+                                    }
+                                } label: {
+                                    Label("删除", systemImage: "trash")
+                                }
+                            }
+                    }
+                }
+                .padding()
+                .padding(.bottom)
+            }
+        }
+    }
+
+    // MARK: - 热力图视图
+    private var heatmapView: some View {
+        ActivityHeatMap(
+            viewModel: viewModel,
+            selectedDate: $selectedDate,
+            showDayDetail: $showDayDetail
+        )
+        .padding(.horizontal)
+        .padding(.bottom)
+    }
+
+    // MARK: - 趋势图表视图
+    private var trendView: some View {
+        TrendChartView(viewModel: viewModel)
+            .padding(.horizontal)
+            .padding(.bottom)
+    }
 }
 
 // 排序选项
+// 统计视图模式
+enum StatsViewMode: String, CaseIterable {
+    case list = "列表"
+    case heatmap = "活跃度"
+    case trend = "趋势"
+}
+
 enum SortOption: CaseIterable {
     case date
     case time

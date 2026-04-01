@@ -194,4 +194,70 @@ class TimerViewModel: ObservableObject {
         let daySolves = getSolvesByDay()
         return daySolves[targetString] ?? []
     }
+
+    // MARK: - 图表数据
+    func getChartData(for range: TimeRange) -> ChartData {
+        let filteredSolves = filterSolves(by: range)
+
+        // 转换为数据点
+        let points = filteredSolves.map { solve in
+            ChartDataPoint(date: solve.date, time: solve.time, solve: solve)
+        }
+
+        // 计算日统计数据
+        let dailyStats = calculateDailyStats(from: filteredSolves)
+
+        return ChartData(points: points, dailyStats: dailyStats, timeRange: range)
+    }
+
+    private func filterSolves(by range: TimeRange) -> [Solve] {
+        guard let days = range.days else {
+            return solves.sorted { $0.date > $1.date }
+        }
+
+        let calendar = Calendar.current
+        let cutoffDate = calendar.date(byAdding: .day, value: -days, to: Date()) ?? Date()
+
+        return solves.filter { $0.date >= cutoffDate }.sorted { $0.date > $1.date }
+    }
+
+    private func calculateDailyStats(from solves: [Solve]) -> [DailyStats] {
+        let calendar = Calendar.current
+        var dailyData: [String: [Solve]] = [:]
+
+        // 按日期分组
+        for solve in solves {
+            let dayKey = calendar.startOfDay(for: solve.date)
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            formatter.timeZone = TimeZone.current
+            let dayString = formatter.string(from: dayKey)
+
+            if dailyData[dayString] == nil {
+                dailyData[dayString] = []
+            }
+            dailyData[dayString]?.append(solve)
+        }
+
+        // 转换为DailyStats
+        return dailyData.compactMap { (dayString, daySolves) -> DailyStats? in
+            guard !daySolves.isEmpty else { return nil }
+
+            let times = daySolves.map { $0.time }
+            let avg = times.reduce(0, +) / Double(times.count)
+            let best = times.min() ?? 0
+            let worst = times.max() ?? 0
+
+            // 取第一条的日期作为代表
+            let representativeDate = daySolves.first?.date ?? Date()
+
+            return DailyStats(
+                date: representativeDate,
+                averageTime: avg,
+                count: daySolves.count,
+                bestTime: best,
+                worstTime: worst
+            )
+        }.sorted { $0.date > $1.date }
+    }
 }
