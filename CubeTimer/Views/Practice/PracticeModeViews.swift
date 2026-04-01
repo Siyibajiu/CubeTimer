@@ -97,7 +97,8 @@ struct StudyModeView: View {
                         .background(Color.orange).cornerRadius(12)
                     }
                 }
-                .padding()
+                .padding(.horizontal)
+                .padding(.bottom, 20) // 增加底部间距，离屏幕下边框保持距离
             }
         }
     }
