@@ -195,7 +195,7 @@ struct FormulaPracticeView: View {
         if isCorrect {
             showSuccessFeedback = true
         }
-        viewModel.nextFormula()
+        // 不在这里调用 nextFormula，等用户点击"下一题"时再调用
     }
 
     private func resetInteractive() {
@@ -207,6 +207,8 @@ struct FormulaPracticeView: View {
 
     private func nextInteractive() {
         resetInteractive()
+        // 跳过当前题目，进入下一题
+        viewModel.nextFormula()
     }
 
     private func resetAllModes() {

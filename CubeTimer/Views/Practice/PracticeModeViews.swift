@@ -260,7 +260,26 @@ struct InteractiveModeView: View {
 
             // 用户输入的操作序列
             VStack(spacing: 6) {
-                Text("你的操作").font(.caption).fontWeight(.semibold).foregroundColor(.secondary)
+                HStack {
+                    Text("你的操作").font(.caption).fontWeight(.semibold).foregroundColor(.secondary)
+                    Spacer()
+                    // 删除最后一步按钮
+                    if !userMoves.isEmpty {
+                        Button(action: {
+                            if !userMoves.isEmpty {
+                                userMoves.removeLast()
+                            }
+                        }) {
+                            Image(systemName: "delete.left")
+                                .font(.caption)
+                                .foregroundColor(.red)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.red.opacity(0.1))
+                                .cornerRadius(4)
+                        }
+                    }
+                }
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 6) {
                         ForEach(Array(userMoves.enumerated()), id: \.offset) { _, move in
@@ -329,14 +348,19 @@ struct InteractiveModeView: View {
                             .background(Color.blue).cornerRadius(10)
                     }
                 } else {
-                    // 提交和重置按钮
+                    // 跳过、提交按钮
                     HStack(spacing: 8) {
-                        Button(action: onReset) {
-                            HStack { Image(systemName: "arrow.counterclockwise"); Text("重置") }
-                                .font(.body).foregroundColor(.white).frame(maxWidth: .infinity).padding(.vertical, 10)
-                                .background(Color.gray.opacity(0.6)).cornerRadius(10)
+                        // 跳过按钮
+                        Button(action: onNext) {
+                            HStack {
+                                Image(systemName: "arrow.right.circle")
+                                Text("跳过")
+                            }
+                            .font(.body).foregroundColor(.white).frame(maxWidth: .infinity).padding(.vertical, 10)
+                            .background(Color.gray.opacity(0.5)).cornerRadius(10)
                         }
 
+                        // 提交按钮
                         Button(action: onSubmit) {
                             HStack {
                                 Image(systemName: "checkmark.square.fill")
