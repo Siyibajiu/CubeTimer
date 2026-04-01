@@ -102,7 +102,10 @@ struct FormulaPracticeView: View {
                             isCorrect: isCorrect,
                             showSuccessFeedback: showSuccessFeedback,
                             onMove: { move in
-                                addMove(move, correct: currentFormula.algorithm)
+                                addMove(move)
+                            },
+                            onSubmit: {
+                                submitAnswer(correct: currentFormula.algorithm)
                             },
                             onReset: {
                                 resetInteractive()
@@ -181,19 +184,18 @@ struct FormulaPracticeView: View {
         }
     }
 
-    private func addMove(_ move: String, correct: String) {
+    private func addMove(_ move: String) {
         userMoves.append(move)
+    }
 
-        // 检查是否完成
+    private func submitAnswer(correct: String) {
         let userAlgorithm = userMoves.joined(separator: " ")
-        if userAlgorithm == correct || userMoves.count >= 20 {
-            showResult = true
-            isCorrect = userAlgorithm == correct
-            if isCorrect {
-                showSuccessFeedback = true
-            }
-            viewModel.nextFormula()
+        showResult = true
+        isCorrect = userAlgorithm == correct
+        if isCorrect {
+            showSuccessFeedback = true
         }
+        viewModel.nextFormula()
     }
 
     private func resetInteractive() {

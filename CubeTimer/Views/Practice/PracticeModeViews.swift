@@ -223,6 +223,7 @@ struct InteractiveModeView: View {
     let isCorrect: Bool
     let showSuccessFeedback: Bool
     let onMove: (String) -> Void
+    let onSubmit: () -> Void
     let onReset: () -> Void
     let onNext: () -> Void
 
@@ -326,10 +327,24 @@ struct InteractiveModeView: View {
                         .padding()
                     }
                 } else {
-                    Button(action: onReset) {
-                        HStack { Image(systemName: "arrow.counterclockwise"); Text("重置") }
+                    VStack(spacing: 12) {
+                        // 提交答案按钮
+                        Button(action: onSubmit) {
+                            HStack {
+                                Image(systemName: "checkmark.square.fill")
+                                Text("提交答案")
+                            }
                             .font(.title3).foregroundColor(.white).frame(maxWidth: .infinity).padding()
-                            .background(Color.gray).cornerRadius(12)
+                            .background(userMoves.isEmpty ? Color.gray : Color.green).cornerRadius(12)
+                        }
+                        .disabled(userMoves.isEmpty)
+
+                        // 重置按钮
+                        Button(action: onReset) {
+                            HStack { Image(systemName: "arrow.counterclockwise"); Text("重置") }
+                                .font(.title3).foregroundColor(.white).frame(maxWidth: .infinity).padding()
+                                .background(Color.gray.opacity(0.5)).cornerRadius(12)
+                        }
                     }
                     .padding()
                 }
