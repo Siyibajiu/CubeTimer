@@ -263,22 +263,21 @@ struct InteractiveModeView: View {
                 HStack {
                     Text("你的操作").font(.caption).fontWeight(.semibold).foregroundColor(.secondary)
                     Spacer()
-                    // 删除最后一步按钮
-                    if !userMoves.isEmpty {
-                        Button(action: {
-                            if !userMoves.isEmpty {
-                                userMoves.removeLast()
-                            }
-                        }) {
-                            Image(systemName: "delete.left")
-                                .font(.caption)
-                                .foregroundColor(.red)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Color.red.opacity(0.1))
-                                .cornerRadius(4)
+                    // 删除最后一步按钮（始终占据空间，避免跳动）
+                    Button(action: {
+                        if !userMoves.isEmpty {
+                            userMoves.removeLast()
                         }
+                    }) {
+                        Image(systemName: "delete.left")
+                            .font(.caption)
+                            .foregroundColor(userMoves.isEmpty ? Color.clear : .red)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.red.opacity(0.1))
+                            .cornerRadius(4)
                     }
+                    .disabled(userMoves.isEmpty)
                 }
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 6) {
@@ -292,6 +291,7 @@ struct InteractiveModeView: View {
                 }
                 .frame(height: 28)
             }
+            .frame(height: 52) // 固定整个区域高度，防止跳动
             .padding(.horizontal, 12)
             .padding(.bottom, 8)
 
