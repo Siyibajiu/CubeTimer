@@ -264,7 +264,7 @@ struct InteractiveModeView: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 6) {
                         ForEach(Array(userMoves.enumerated()), id: \.offset) { _, move in
-                            Text(move).font(.system(.caption, design: .monospaced)).fontWeight(.semibold)
+                            Text(move).font(.caption).fontWeight(.semibold).monospaced()
                                 .foregroundColor(.white).padding(.horizontal, 8).padding(.vertical, 4)
                                 .background(userMoves.isEmpty ? Color.gray : Color.blue).cornerRadius(6)
                         }
@@ -318,7 +318,7 @@ struct InteractiveModeView: View {
                     if !isCorrect {
                         VStack(spacing: 2) {
                             Text("正确答案：").font(.caption2).foregroundColor(.secondary)
-                            Text(formula.algorithm).font(.system(.monospaced).caption).fontWeight(.semibold).foregroundColor(.blue)
+                            Text(formula.algorithm).font(.caption).fontWeight(.semibold).monospaced().foregroundColor(.blue)
                         }
                         .padding(.vertical, 4).padding(.horizontal, 8).background(Color.blue.opacity(0.1)).cornerRadius(6)
                     }
