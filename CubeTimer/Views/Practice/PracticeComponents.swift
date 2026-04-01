@@ -74,9 +74,9 @@ struct MoveButton: View {
 
     var body: some View {
         Button(action: action) {
-            Text(move).font(.system(.title2, design: .monospaced)).fontWeight(.bold)
-                .foregroundColor(.white).frame(height: 60).frame(maxWidth: .infinity)
-                .background(Color.blue).cornerRadius(12)
+            Text(move).font(.system(.title3, design: .monospaced)).fontWeight(.bold)
+                .foregroundColor(.white).frame(height: 50).frame(maxWidth: .infinity)
+                .background(Color.blue).cornerRadius(10)
         }
     }
 }

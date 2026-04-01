@@ -231,132 +231,134 @@ struct InteractiveModeView: View {
     private let modifiers = ["", "'", "2"]
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                Spacer().frame(height: 20)
+        VStack(spacing: 0) {
+            // 提示文字
+            VStack(spacing: 4) {
+                Text("按顺序完成这个公式").font(.headline).fontWeight(.bold)
+                Text("查看上面的魔方状态，点击按钮完成操作").font(.caption).foregroundColor(.secondary)
+            }
+            .padding(.top, 8)
+            .padding(.bottom, 4)
 
-                // 提示文字
-                VStack(spacing: 8) {
-                    Text("按顺序完成这个公式").font(.title2).fontWeight(.bold)
-                    Text("查看上面的魔方状态，点击按钮完成操作").font(.body).foregroundColor(.secondary)
+            // 公式图片
+            if let imageName = formula.imageName {
+                LocalAsyncImage(imageName: imageName) { phase in
+                    switch phase {
+                    case .empty:
+                        ProgressView().frame(width: 120, height: 120)
+                    case .success(let image):
+                        image.resizable().aspectRatio(contentMode: .fit).frame(height: 120).clipped()
+                    case .failure(_):
+                        fallbackView
+                    @unknown default:
+                        fallbackView
+                    }
                 }
+            } else {
+                fallbackView
+            }
 
-                // 公式图片
-                if let imageName = formula.imageName {
-                    LocalAsyncImage(imageName: imageName) { phase in
-                        switch phase {
-                        case .empty:
-                            ProgressView().frame(width: 200, height: 200)
-                        case .success(let image):
-                            image.resizable().aspectRatio(contentMode: .fit).frame(height: 180).clipped()
-                        case .failure(_):
-                            fallbackView
-                        @unknown default:
-                            fallbackView
+            // 用户输入的操作序列
+            VStack(spacing: 6) {
+                Text("你的操作").font(.caption).fontWeight(.semibold).foregroundColor(.secondary)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        ForEach(Array(userMoves.enumerated()), id: \.offset) { _, move in
+                            Text(move).font(.system(.caption, design: .monospaced)).fontWeight(.semibold)
+                                .foregroundColor(.white).padding(.horizontal, 8).padding(.vertical, 4)
+                                .background(userMoves.isEmpty ? Color.gray : Color.blue).cornerRadius(6)
                         }
                     }
-                } else {
-                    fallbackView
+                    .padding(.horizontal, 4)
+                }
+                .frame(height: 28)
+            }
+            .padding(.horizontal, 12)
+            .padding(.bottom, 8)
+
+            // 操作按钮区域
+            VStack(spacing: 8) {
+                // 主要操作按钮
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
+                    ForEach(moves, id: \.self) { move in MoveButton(move: move) { onMove(move) } }
                 }
 
-                // 用户输入的操作序列
-                VStack(spacing: 12) {
-                    Text("你的操作").font(.headline)
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(Array(userMoves.enumerated()), id: \.offset) { _, move in
-                                Text(move).font(.system(.body, design: .monospaced)).fontWeight(.semibold)
-                                    .foregroundColor(.white).padding(.horizontal, 12).padding(.vertical, 8)
-                                    .background(userMoves.isEmpty ? Color.gray : Color.blue).cornerRadius(8)
+                // 修饰按钮
+                HStack(spacing: 8) {
+                    ForEach(modifiers, id: \.self) { modifier in
+                        Button(action: {
+                            if !userMoves.isEmpty {
+                                let lastMove = userMoves.removeLast()
+                                let modifiedMove = modifier.isEmpty ? lastMove : lastMove + modifier
+                                onMove(modifiedMove)
                             }
+                        }) {
+                            Text(modifier.isEmpty ? "无修饰" : modifier).font(.caption).foregroundColor(.white)
+                                .frame(maxWidth: .infinity).padding(.vertical, 8).background(Color.orange).cornerRadius(6)
                         }
-                        .padding(.horizontal)
+                        .disabled(userMoves.isEmpty || showResult)
                     }
                 }
-                .padding()
+            }
+            .padding(.horizontal, 12)
 
-                // 操作按钮区域
-                VStack(spacing: 12) {
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
-                        ForEach(moves, id: \.self) { move in MoveButton(move: move) { onMove(move) } }
-                    }
+            Spacer()
 
-                    HStack(spacing: 10) {
-                        ForEach(modifiers, id: \.self) { modifier in
-                            Button(action: {
-                                if !userMoves.isEmpty {
-                                    let lastMove = userMoves.removeLast()
-                                    let modifiedMove = modifier.isEmpty ? lastMove : lastMove + modifier
-                                    onMove(modifiedMove)
-                                }
-                            }) {
-                                Text(modifier.isEmpty ? "无修饰" : modifier).font(.body).foregroundColor(.white)
-                                    .frame(maxWidth: .infinity).padding().background(Color.orange).cornerRadius(8)
-                            }
-                            .disabled(userMoves.isEmpty || showResult)
-                        }
-                    }
-                }
-                .padding()
-
-                Spacer()
-
-                // 底部按钮
+            // 底部按钮
+            VStack(spacing: 8) {
                 if showResult {
-                    VStack(spacing: 12) {
-                        HStack {
-                            Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill").font(.title)
-                            Text(isCorrect ? "回答正确！" : "回答错误").font(.title3).fontWeight(.semibold)
-                        }
-                        .foregroundColor(isCorrect ? .green : .red).padding()
-                        .background((isCorrect ? Color.green : Color.red).opacity(0.1)).cornerRadius(12)
+                    // 结果显示
+                    HStack {
+                        Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill").font(.title3)
+                        Text(isCorrect ? "回答正确！" : "回答错误").font(.subheadline).fontWeight(.semibold)
+                    }
+                    .foregroundColor(isCorrect ? .green : .red).padding(.vertical, 6).padding(.horizontal, 12)
+                    .background((isCorrect ? Color.green : Color.red).opacity(0.1)).cornerRadius(8)
 
-                        if !isCorrect {
-                            VStack(spacing: 4) {
-                                Text("正确答案：").font(.caption).foregroundColor(.secondary)
-                                Text(formula.algorithm).font(.system(.body, design: .monospaced)).fontWeight(.semibold).foregroundColor(.blue)
-                            }
-                            .padding().background(Color.blue.opacity(0.1)).cornerRadius(12)
+                    if !isCorrect {
+                        VStack(spacing: 2) {
+                            Text("正确答案：").font(.caption2).foregroundColor(.secondary)
+                            Text(formula.algorithm).font(.caption, design: .monospaced).fontWeight(.semibold).foregroundColor(.blue)
                         }
+                        .padding(.vertical, 4).padding(.horizontal, 8).background(Color.blue.opacity(0.1)).cornerRadius(6)
+                    }
 
-                        Button(action: onNext) {
-                            HStack { Image(systemName: "arrow.right.circle.fill"); Text("下一题") }
-                                .font(.title3).foregroundColor(.white).frame(maxWidth: .infinity).padding()
-                                .background(Color.blue).cornerRadius(12)
-                        }
-                        .padding()
+                    Button(action: onNext) {
+                        HStack { Image(systemName: "arrow.right.circle.fill"); Text("下一题") }
+                            .font(.body).foregroundColor(.white).frame(maxWidth: .infinity).padding(.vertical, 10)
+                            .background(Color.blue).cornerRadius(10)
                     }
                 } else {
-                    VStack(spacing: 12) {
-                        // 提交答案按钮
+                    // 提交和重置按钮
+                    HStack(spacing: 8) {
+                        Button(action: onReset) {
+                            HStack { Image(systemName: "arrow.counterclockwise"); Text("重置") }
+                                .font(.body).foregroundColor(.white).frame(maxWidth: .infinity).padding(.vertical, 10)
+                                .background(Color.gray.opacity(0.6)).cornerRadius(10)
+                        }
+
                         Button(action: onSubmit) {
                             HStack {
                                 Image(systemName: "checkmark.square.fill")
-                                Text("提交答案")
+                                Text("提交")
                             }
-                            .font(.title3).foregroundColor(.white).frame(maxWidth: .infinity).padding()
-                            .background(userMoves.isEmpty ? Color.gray : Color.green).cornerRadius(12)
+                            .font(.body).foregroundColor(.white).frame(maxWidth: .infinity).padding(.vertical, 10)
+                            .background(userMoves.isEmpty ? Color.gray : Color.green).cornerRadius(10)
                         }
                         .disabled(userMoves.isEmpty)
-
-                        // 重置按钮
-                        Button(action: onReset) {
-                            HStack { Image(systemName: "arrow.counterclockwise"); Text("重置") }
-                                .font(.title3).foregroundColor(.white).frame(maxWidth: .infinity).padding()
-                                .background(Color.gray.opacity(0.5)).cornerRadius(12)
-                        }
                     }
-                    .padding()
                 }
             }
+            .padding(.horizontal, 12)
+            .padding(.bottom, 8)
         }
     }
 
     private var fallbackView: some View {
-        RoundedRectangle(cornerRadius: 12).fill(Color.gray.opacity(0.2)).frame(height: 180)
-            .overlay(VStack {
-                Image(systemName: "cube.fill").font(.system(size: 40)).foregroundColor(.gray)
-                Text("暂无图片").font(.caption).foregroundColor(.secondary)
+        RoundedRectangle(cornerRadius: 8).fill(Color.gray.opacity(0.2)).frame(height: 120)
+            .overlay(VStack(spacing: 4) {
+                Image(systemName: "cube.fill").font(.system(size: 24)).foregroundColor(.gray)
+                Text("暂无图片").font(.caption2).foregroundColor(.secondary)
             })
     }
 }
