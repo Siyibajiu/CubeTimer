@@ -318,7 +318,7 @@ struct InteractiveModeView: View {
                     if !isCorrect {
                         VStack(spacing: 2) {
                             Text("正确答案：").font(.caption2).foregroundColor(.secondary)
-                            Text(formula.algorithm).font(.caption, design: .monospaced).fontWeight(.semibold).foregroundColor(.blue)
+                            Text(formula.algorithm).font(.system(.monospaced).caption).fontWeight(.semibold).foregroundColor(.blue)
                         }
                         .padding(.vertical, 4).padding(.horizontal, 8).background(Color.blue.opacity(0.1)).cornerRadius(6)
                     }
