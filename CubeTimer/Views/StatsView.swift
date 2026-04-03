@@ -8,6 +8,7 @@ struct StatsView: View {
     @State private var sortOrder: SortOrder = .descending
     @State private var selectedDate: Date?
     @State private var showDayDetail = false
+    @State private var filterCategory: CFOPStage? = nil  // 分类筛选
 
     // 导出/导入相关状态
     @State private var showExportSheet = false
@@ -16,8 +17,16 @@ struct StatsView: View {
     @State private var showImportAlert = false
     @State private var importMessage = ""
 
+    var filteredSolves: [Solve] {
+        let base = viewModel.solves
+        if let category = filterCategory {
+            return base.filter { $0.category == category }
+        }
+        return base
+    }
+
     var sortedSolves: [Solve] {
-        let sorted = viewModel.solves.sorted { solve1, solve2 in
+        let sorted = filteredSolves.sorted { solve1, solve2 in
             switch sortBy {
             case .date:
                 return sortOrder == .ascending ? solve1.date < solve2.date : solve1.date > solve2.date
@@ -40,7 +49,7 @@ struct StatsView: View {
 
                         Spacer()
 
-                        Text("共 \(viewModel.solves.count) 条记录")
+                        Text("共 \(filteredSolves.count) 条记录")
                             .font(.caption)
                             .foregroundColor(.secondary)
 
@@ -66,22 +75,32 @@ struct StatsView: View {
                     }
                     .padding()
 
+                    // 分类筛选器
+                    Picker("筛选分类", selection: $filterCategory) {
+                        Text("全部").tag(nil as CFOPStage?)
+                        Text("F2L").tag(CFOPStage.f2l as CFOPStage?)
+                        Text("OLL").tag(CFOPStage.oll as CFOPStage?)
+                        Text("PLL").tag(CFOPStage.pll as CFOPStage?)
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal)
+
                     HStack(spacing: 12) {
                         StatCard(
                             title: "PB",
-                            value: viewModel.pb.map { viewModel.formattedTime($0) } ?? "--:--.---",
+                            value: viewModel.pb(for: filterCategory).map { viewModel.formattedTime($0) } ?? "--:--.---",
                             color: .yellow
                         )
 
                         StatCard(
                             title: "Ao5",
-                            value: viewModel.ao5.map { viewModel.formattedTime($0) } ?? "需5次",
+                            value: viewModel.ao5(for: filterCategory).map { viewModel.formattedTime($0) } ?? "需5次",
                             color: .blue
                         )
 
                         StatCard(
                             title: "Ao12",
-                            value: viewModel.ao12.map { viewModel.formattedTime($0) } ?? "需12次",
+                            value: "需12次",  // 简化显示，专项计时通常不需要Ao12
                             color: .green
                         )
                     }
@@ -300,7 +319,7 @@ struct SolveCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // 顶部：排名和日期
+            // 顶部：排名、日期和分类标签
             HStack {
                 Text("#\(viewModel.getRank(for: solve))")
                     .font(.caption)
@@ -310,6 +329,18 @@ struct SolveCard: View {
                 Text(formatDate(solve.date))
                     .font(.caption)
                     .foregroundColor(.secondary)
+
+                // 分类标签
+                if let category = solve.category {
+                    Text(category.rawValue)
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(categoryColor(for: category).opacity(0.2))
+                        .foregroundColor(categoryColor(for: category))
+                        .cornerRadius(4)
+                }
 
                 Spacer()
 
@@ -346,6 +377,17 @@ struct SolveCard: View {
 
     private func formatDate(_ date: Date) -> String {
         return Self.dateFormatter.string(from: date)
+    }
+
+    private func categoryColor(for category: CFOPStage) -> Color {
+        switch category {
+        case .f2l:
+            return .blue
+        case .oll:
+            return .orange
+        case .pll:
+            return .purple
+        }
     }
 }
 

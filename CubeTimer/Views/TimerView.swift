@@ -7,6 +7,17 @@ struct TimerView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            // 专项计时选择器
+            Picker("计时类型", selection: $viewModel.selectedCategory) {
+                Text("完整还原").tag(nil as CFOPStage?)
+                Text("F2L").tag(CFOPStage.f2l as CFOPStage?)
+                Text("OLL").tag(CFOPStage.oll as CFOPStage?)
+                Text("PLL").tag(CFOPStage.pll as CFOPStage?)
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal)
+            .padding(.top, 8)
+
             // 顶部：打乱步骤（可点击刷新，约占25%）
             VStack {
                 Button(action: {

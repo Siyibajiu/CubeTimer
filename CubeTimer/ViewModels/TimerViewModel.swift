@@ -12,6 +12,9 @@ class TimerViewModel: ObservableObject {
     private let scrambler = ScrambleGenerator()
     @Published var currentScramble = ""
 
+    // 专项计时类型
+    @Published var selectedCategory: CFOPStage? = nil  // nil 表示完整还原
+
     // 观察时间相关
     @Published var inspectionTime: Int = 15
     @Published var isInspecting = false
@@ -128,11 +131,12 @@ class TimerViewModel: ObservableObject {
     func saveSolve() {
         guard currentTime > 0 else { return }
 
-        // 创建成绩记录
+        // 创建成绩记录，包含专项类型
         let solve = Solve(
             date: Date(),
             time: currentTime,
-            scramble: currentScramble
+            scramble: currentScramble,
+            category: selectedCategory  // 记录当前选择的分类
         )
 
         // 添加到列表
@@ -145,6 +149,31 @@ class TimerViewModel: ObservableObject {
         currentTime = 0
         cancelInspection()
         generateNewScramble()
+    }
+
+    // 根据分类筛选成绩
+    func filteredSolves(for category: CFOPStage?) -> [Solve] {
+        if let category = category {
+            return solves.filter { $0.category == category }
+        } else {
+            return solves.filter { $0.category == nil }
+        }
+    }
+
+    // 获取当前分类的 PB
+    func pb(for category: CFOPStage?) -> TimeInterval? {
+        filteredSolves(for: category).map { $0.time }.min()
+    }
+
+    // 获取当前分类的 AO5
+    func ao5(for category: CFOPStage?) -> TimeInterval? {
+        let filtered = filteredSolves(for: category)
+        guard filtered.count >= 5 else { return nil }
+
+        let recent5 = Array(filtered.prefix(5))
+        let times = recent5.map { $0.time }.sorted()
+        let trimmed = times.dropFirst().dropLast()
+        return trimmed.reduce(0, +) / Double(trimmed.count)
     }
 
     func generateNewScramble() {
