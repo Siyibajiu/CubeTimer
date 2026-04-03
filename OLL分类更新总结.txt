@@ -1,0 +1,58 @@
+OLL算法更新总结
+==================
+
+更新时间: 2026年4月3日
+数据来源: Speedsolving Wiki (https://www.speedsolving.com/wiki/index.php/OLL)
+
+更新内容:
+--------
+1. ✅ 从Speedsolving Wiki提取了完整的57个OLL算法
+2. ✅ 下载了所有57个OLL图片 (oll_1.png ~ oll_57.png)
+3. ✅ 创建了对应的imageset目录结构
+4. ✅ 添加了OLL形状分类信息
+
+OLL分类统计:
+-----------
+✅ OCLL (棱块已定向):     7个案例 (OLL 21-27)
+✅ Dot (无棱块定向):       8个案例 (OLL 1-4, 17-20)
+✅ S 形状:                2个案例 (OLL 5-6)
+✅ 大闪电形状:             2个案例 (OLL 39-40)
+✅ 小闪电形状:             4个案例 (OLL 7-8, 11-12)
+✅ 鱼形:                  4个案例 (OLL 9-10, 35, 37)
+✅ 马步形:                4个案例 (OLL 13-16)
+✅ Awkward 形状:          4个案例 (OLL 29-30, 41-42)
+✅ P 形状:                4个案例 (OLL 31-32, 43-44)
+✅ W 形状:                2个案例 (OLL 36, 38)
+✅ L 形状:                6个案例 (OLL 47-50, 53-54)
+✅ C 形状:                2个案例 (OLL 34, 46)
+✅ T 形状:                2个案例 (OLL 33, 45)
+✅ I 形状:                4个案例 (OLL 51-52, 55-56)
+✅ E 形状 (角块已定向):    2个案例 (OLL 28, 57)
+
+总计: 57个OLL算法
+
+文件结构:
+---------
+CubeTimer/Models/OLLData.swift - OLL算法数据（包含分类）
+CubeTimer/Assets.xcassets/OLL/
+  ├── oll_1.imageset/ ~ oll_57.imageset/ - 57个图片目录
+
+OLL命名格式:
+-----------
+- Formula名称: "OLL X (分类)" 例如 "OLL 27 (OCLL)"
+- 图片名称: oll_X.png 例如 oll_27.png
+- 算法: 从Speedsolving Wiki提取的标准算法
+
+使用方法:
+---------
+在代码中调用:
+  let ollData = OLLData.shared
+  let allFormulas = ollData.getAllFormulas()  // 获取所有57个OLL
+  let grouped = ollData.getFormulasByCategory()  // 按分类获取
+
+注意:
+------
+1. 所有OLL算法和图片完全匹配
+2. 图片使用数字命名（oll_1到oll_57），与OLL编号对应
+3. 分类信息添加在OLL名称中，方便识别和分组
+4. 算法从Speedsolving Wiki官方来源提取，确保准确性

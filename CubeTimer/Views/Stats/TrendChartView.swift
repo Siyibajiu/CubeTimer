@@ -6,11 +6,42 @@ struct TrendChartView: View {
     @State private var selectedRange: TimeRange = .month
     @State private var showDailyAverage = false
 
-    private var chartData: ChartData {
-        viewModel.getChartData(for: selectedRange)
+    // 静态 DateFormatter，避免重复创建
+    private static let shortDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "M/d"
+        formatter.locale = Locale(identifier: "zh_CN")
+        return formatter
+    }()
+
+    // 简单的缓存机制
+    @State private var cachedChartData: ChartData?
+    @State private var lastCacheKey: String = ""
+
+    // 获取缓存的图表数据
+    private func getCachedChartData() -> ChartData {
+        // 使用最后一条成绩的 ID 作为缓存键，避免频繁失效
+        let lastSolveId = viewModel.solves.first?.id.uuidString ?? "empty"
+        let cacheKey = "\(selectedRange.rawValue)-\(showDailyAverage)-\(lastSolveId)"
+
+        // 检查缓存是否有效
+        if let cached = cachedChartData, lastCacheKey == cacheKey {
+            return cached
+        }
+
+        // 重新计算
+        let newData = viewModel.getChartData(for: selectedRange)
+
+        // 更新缓存
+        cachedChartData = newData
+        lastCacheKey = cacheKey
+
+        return newData
     }
 
     var body: some View {
+        let chartData = getCachedChartData()
+
         VStack(spacing: 16) {
             // 标题和时间范围选择
             header
@@ -66,13 +97,15 @@ struct TrendChartView: View {
 
     // MARK: - 图表
     private var chart: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        let chartData = getCachedChartData()
+
+        return VStack(alignment: .leading, spacing: 8) {
             if showDailyAverage {
                 // 日均折线图
-                dailyAverageChart
+                dailyAverageChart(chartData: chartData)
             } else {
                 // 单次成绩散点图+折线图
-                singleSolveChart
+                singleSolveChart(chartData: chartData)
             }
         }
         .frame(height: 200)
@@ -82,7 +115,7 @@ struct TrendChartView: View {
     }
 
     // MARK: - 单次成绩图表
-    private var singleSolveChart: some View {
+    private func singleSolveChart(chartData: ChartData) -> some View {
         Chart {
             // 辅助线：PB
             if let pb = viewModel.pb {
@@ -144,7 +177,7 @@ struct TrendChartView: View {
     }
 
     // MARK: - 日均图表
-    private var dailyAverageChart: some View {
+    private func dailyAverageChart(chartData: ChartData) -> some View {
         Chart {
             // 辅助线：总平均
             if let avg = chartData.averageTime {
@@ -203,7 +236,9 @@ struct TrendChartView: View {
 
     // MARK: - 统计摘要卡片
     private var summaryCards: some View {
-        HStack(spacing: 12) {
+        let chartData = getCachedChartData()
+
+        return HStack(spacing: 12) {
             SummaryCard(
                 title: "总次数",
                 value: "\(chartData.points.count)",
@@ -288,10 +323,7 @@ struct TrendChartView: View {
     }
 
     private func formatShortDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "M/d"
-        formatter.locale = Locale(identifier: "zh_CN")
-        return formatter.string(from: date)
+        return Self.shortDateFormatter.string(from: date)
     }
 }
 

@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import Combine
+import UIKit
 
 class PracticeViewModel: ObservableObject {
     @Published var currentFormula: Formula?
@@ -8,17 +9,53 @@ class PracticeViewModel: ObservableObject {
     private var formulas: [Formula] = []
     private var currentIndex = 0
 
+    // Debounce 订阅，用于延迟写入
+    private var saveCancellable: AnyCancellable?
+    private let saveDebounceInterval: TimeInterval = 1.0 // 1秒延迟
+
+    // 缓存所有公式数据，避免重复加载
+    private let allFormulasCache: [Formula]
+
     init() {
+        // 只在初始化时加载一次所有公式
+        allFormulasCache = CompleteFormulaData.shared.getAllFormulas()
+
         loadFormulas(category: nil)
+        setupDebounceSave()
+
+        // 监听 App 生命周期事件
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(saveBeforeTerminate),
+            name: UIApplication.willResignActiveNotification,
+            object: nil
+        )
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    // 设置延迟保存
+    private func setupDebounceSave() {
+        saveCancellable = $practiceData
+            .debounce(for: .seconds(saveDebounceInterval), scheduler: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.savePracticeProgress()
+            }
+    }
+
+    // App 进入后台时立即保存
+    @objc private func saveBeforeTerminate() {
+        savePracticeProgress()
     }
 
     func loadFormulas(category: CFOPStage?) {
-        let allFormulas = CompleteFormulaData.shared.getAllFormulas()
-
+        // 直接使用缓存的公式数据，避免重复调用 getAllFormulas()
         if let category = category {
-            formulas = allFormulas.filter { $0.category == category }
+            formulas = allFormulasCache.filter { $0.category == category }
         } else {
-            formulas = allFormulas
+            formulas = allFormulasCache
         }
 
         // 加载练习进度
@@ -55,7 +92,7 @@ class PracticeViewModel: ObservableObject {
         } else {
             practiceData[formula.id] = FormulaPractice(formulaId: formula.id, isMastered: true, practiceCount: 0, lastPracticed: nil)
         }
-        savePracticeProgress()
+        // 移除直接保存，由 debounce 自动处理
     }
 
     func getPracticeCount(for formula: Formula) -> Int {
@@ -66,6 +103,20 @@ class PracticeViewModel: ObservableObject {
         return practiceData[formula.id]?.isMastered ?? false
     }
 
+    func toggleError(_ formula: Formula) {
+        if var data = practiceData[formula.id] {
+            data.hasError.toggle()
+            practiceData[formula.id] = data
+        } else {
+            practiceData[formula.id] = FormulaPractice(formulaId: formula.id, isMastered: false, practiceCount: 0, lastPracticed: nil, hasError: true)
+        }
+        // 移除直接保存，由 debounce 自动处理
+    }
+
+    func hasError(_ formula: Formula) -> Bool {
+        return practiceData[formula.id]?.hasError ?? false
+    }
+
     private func incrementPracticeCount(_ formulaId: UUID) {
         if var data = practiceData[formulaId] {
             data.practiceCount += 1
@@ -74,7 +125,7 @@ class PracticeViewModel: ObservableObject {
         } else {
             practiceData[formulaId] = FormulaPractice(formulaId: formulaId, isMastered: false, practiceCount: 1, lastPracticed: Date())
         }
-        savePracticeProgress()
+        // 移除直接保存，由 debounce 自动处理
     }
 
     private func savePracticeProgress() {

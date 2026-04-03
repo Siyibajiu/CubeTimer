@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct StatsView: View {
     @ObservedObject var viewModel: TimerViewModel
@@ -7,6 +8,13 @@ struct StatsView: View {
     @State private var sortOrder: SortOrder = .descending
     @State private var selectedDate: Date?
     @State private var showDayDetail = false
+
+    // 导出/导入相关状态
+    @State private var showExportSheet = false
+    @State private var showImportPicker = false
+    @State private var exportFileURL: URL?
+    @State private var showImportAlert = false
+    @State private var importMessage = ""
 
     var sortedSolves: [Solve] {
         let sorted = viewModel.solves.sorted { solve1, solve2 in
@@ -35,6 +43,26 @@ struct StatsView: View {
                         Text("共 \(viewModel.solves.count) 条记录")
                             .font(.caption)
                             .foregroundColor(.secondary)
+
+                        // 导出按钮
+                        Button(action: {
+                            if let url = viewModel.exportData() {
+                                exportFileURL = url
+                                showExportSheet = true
+                            }
+                        }) {
+                            Image(systemName: "square.and.arrow.up")
+                                .foregroundColor(.blue)
+                        }
+                        .disabled(viewModel.solves.isEmpty)
+
+                        // 导入按钮
+                        Button(action: {
+                            showImportPicker = true
+                        }) {
+                            Image(systemName: "square.and.arrow.down")
+                                .foregroundColor(.green)
+                        }
                     }
                     .padding()
 
@@ -89,6 +117,36 @@ struct StatsView: View {
             if let selectedDate = selectedDate {
                 DayDetailView(date: selectedDate, viewModel: viewModel)
             }
+        }
+        .sheet(isPresented: $showExportSheet) {
+            if let fileURL = exportFileURL {
+                ActivityViewController(activityItems: [fileURL])
+            }
+        }
+        .fileImporter(
+            isPresented: $showImportPicker,
+            allowedContentTypes: [.json],
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                if let url = urls.first {
+                    if viewModel.importData(from: url) {
+                        importMessage = "导入成功！"
+                    } else {
+                        importMessage = "导入失败，请检查文件格式。"
+                    }
+                    showImportAlert = true
+                }
+            case .failure(let error):
+                importMessage = "导入失败: \(error.localizedDescription)"
+                showImportAlert = true
+            }
+        }
+        .alert("导入结果", isPresented: $showImportAlert) {
+            Button("确定", role: .cancel) { }
+        } message: {
+            Text(importMessage)
         }
     }
 
@@ -232,6 +290,14 @@ struct SolveCard: View {
     let solve: Solve
     let viewModel: TimerViewModel
 
+    // 静态 DateFormatter，避免重复创建
+    private static let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        formatter.timeStyle = .none
+        return formatter
+    }()
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             // 顶部：排名和日期
@@ -279,10 +345,7 @@ struct SolveCard: View {
     }
 
     private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .short
-        formatter.timeStyle = .none
-        return formatter.string(from: date)
+        return Self.dateFormatter.string(from: date)
     }
 }
 
@@ -300,44 +363,24 @@ struct ActivityHeatMap: View {
                 Text("今年练习活跃度")
                     .font(.headline)
                 Spacer()
-                Text("← 滑动查看更多")
+                Text("共 \(viewModel.solves.count) 次练习")
                     .font(.caption2)
                     .foregroundColor(.secondary)
             }
             .padding(.horizontal, 4)
 
-            // 热力图
-            ScrollView(.horizontal, showsIndicators: true) {
-                VStack(alignment: .leading, spacing: 2) {
-                    // 星期标签
-                    HStack(spacing: 2) {
-                        ForEach(["一", "", "三", "", "五", "", "日"], id: \.self) { day in
-                            if !day.isEmpty {
-                                Text(day)
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                                    .frame(width: 11, height: 11)
-                            } else {
-                                Color.clear
-                                    .frame(width: 11, height: 11)
-                            }
-                        }
-                    }
-
-                    // 每周的格子（52-53周）
-                    let weeks = generateYearData()
-                    LazyVGrid(columns: Array(repeating: GridItem(.fixed(11), spacing: 2), count: 53), spacing: 2) {
-                        ForEach(weeks, id: \.id) { dayData in
-                            DayCell(dayData: dayData)
-                                .onTapGesture {
-                                    if dayData.count > 0 {
-                                        selectedDate = dayData.date
-                                        showDayDetail = true
-                                    }
-                                }
-                        }
-                    }
-                    .frame(width: CGFloat(53 * 13))
+            // 热力图 - 多列布局，一屏显示
+            let months = monthlyData()
+            LazyVGrid(
+                columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3),
+                spacing: 8
+            ) {
+                ForEach(months, id: \.month) { monthData in
+                    CompactMonthHeatMap(
+                        monthData: monthData,
+                        selectedDate: $selectedDate,
+                        showDayDetail: $showDayDetail
+                    )
                 }
             }
 
@@ -349,15 +392,12 @@ struct ActivityHeatMap: View {
                 ForEach(0..<5) { level in
                     RoundedRectangle(cornerRadius: 2)
                         .fill(colorForLevel(level))
-                        .frame(width: 11, height: 11)
+                        .frame(width: 12, height: 12)
                 }
                 Text("多")
                     .font(.caption2)
                     .foregroundColor(.secondary)
                 Spacer()
-                Text("共 \(viewModel.solves.count) 次练习")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
             }
             .padding(.horizontal, 4)
         }
@@ -367,6 +407,46 @@ struct ActivityHeatMap: View {
                 .fill(Color(.systemBackground))
                 .shadow(color: .black.opacity(0.05), radius: 3, x: 0, y: 1)
         )
+    }
+
+    // 按月分组数据
+    private func monthlyData() -> [(month: Int, name: String, weeks: [[DayData]])] {
+        let allDays = generateYearData()
+
+        var months: [(month: Int, name: String, weeks: [[DayData]])] = []
+        let monthNames = ["1月", "2月", "3月", "4月", "5月", "6月",
+                         "7月", "8月", "9月", "10月", "11月", "12月"]
+
+        // 按月分组
+        for month in 1...12 {
+            let monthDays = allDays.filter { day in
+                let components = calendar.dateComponents([.month], from: day.date)
+                return components.month == month
+            }
+
+            if !monthDays.isEmpty {
+                // 按周分组（每周7天）
+                var weeks: [[DayData]] = []
+                var currentWeek: [DayData] = []
+
+                for day in monthDays {
+                    currentWeek.append(day)
+                    if currentWeek.count == 7 {
+                        weeks.append(currentWeek)
+                        currentWeek = []
+                    }
+                }
+
+                // 添加最后一周（可能不满7天）
+                if !currentWeek.isEmpty {
+                    weeks.append(currentWeek)
+                }
+
+                months.append((month: month, name: monthNames[month-1], weeks: weeks))
+            }
+        }
+
+        return months
     }
 
     // 生成一年的数据（365天，按周排列）
@@ -383,11 +463,6 @@ struct ActivityHeatMap: View {
         let daysFromMonday = (weekday == 1 ? 6 : weekday - 2)
         startDate = calendar.date(byAdding: .day, value: -daysFromMonday, to: startDate) ?? startDate
 
-        // 创建日期格式化器
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        formatter.timeZone = TimeZone.current
-
         // 生成一年的数据（大约53周）
         var allDays: [DayData] = []
         var currentDate = startDate
@@ -397,14 +472,22 @@ struct ActivityHeatMap: View {
         let totalWeeks = ((daysInYear + daysFromMonday) + 6) / 7 // 向上取整
 
         for _ in 0..<(totalWeeks * 7) {
-            let dayString = formatter.string(from: currentDate)
+            let dayString = dayFormatter.string(from: currentDate)
             let count = daySolves[dayString]?.count ?? 0
-            allDays.append(DayData(id: UUID(), date: currentDate, count: count))
+            allDays.append(DayData(date: currentDate, count: count))
             currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate) ?? currentDate
         }
 
         return allDays
     }
+
+    // 复用DateFormatter，避免重复创建
+    private let dayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.timeZone = TimeZone.current
+        return formatter
+    }()
 
     private func colorForLevel(_ level: Int) -> Color {
         switch level {
@@ -416,37 +499,25 @@ struct ActivityHeatMap: View {
         default: return Color.green
         }
     }
-
-    // 将行优先的数据重新组织为列优先（适用于LazyVGrid）
-    private func reorganizeForColumns(_ data: [DayData], columns: Int) -> [DayData] {
-        guard !data.isEmpty else { return [] }
-
-        var result: [DayData] = []
-        let rows = (data.count + columns - 1) / columns
-
-        for col in 0..<columns {
-            for row in 0..<rows {
-                let index = row * columns + col
-                if index < data.count {
-                    result.append(data[index])
-                }
-            }
-        }
-
-        return result
-    }
 }
 
 // 单日数据
 struct DayData: Identifiable, Hashable {
-    let id: UUID
+    let id: Int  // 使用date的哈希值作为ID，避免创建大量UUID对象
     let date: Date
     let count: Int
+
+    init(date: Date, count: Int) {
+        self.date = date
+        self.count = count
+        self.id = abs(date.hashValue)
+    }
 }
 
 // 单日格子
 struct DayCell: View {
     let dayData: DayData
+    var size: CGFloat = 11
 
     var body: some View {
         let level = min(dayData.count, 4)
@@ -460,7 +531,86 @@ struct DayCell: View {
 
         RoundedRectangle(cornerRadius: 2)
             .fill(color)
-            .frame(width: 11, height: 11)
+            .frame(width: size, height: size)
+    }
+}
+
+// 月份热力图
+struct MonthHeatMap: View {
+    let monthData: (month: Int, name: String, weeks: [[DayData]])
+    @Binding var selectedDate: Date?
+    @Binding var showDayDetail: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            // 月份标题
+            Text(monthData.name)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundColor(.primary)
+
+            // 该月的周热力图
+            VStack(alignment: .leading, spacing: 2) {
+                ForEach(monthData.weeks.indices, id: \.self) { weekIndex in
+                    HStack(spacing: 2) {
+                        ForEach(monthData.weeks[weekIndex], id: \.id) { dayData in
+                            DayCell(dayData: dayData, size: 14)
+                                .onTapGesture {
+                                    if dayData.count > 0 {
+                                        selectedDate = dayData.date
+                                        showDayDetail = true
+                                    }
+                                }
+                        }
+                    }
+                }
+            }
+        }
+        .padding(8)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.gray.opacity(0.05))
+        )
+    }
+}
+
+// 紧凑月份热力图 - 用于3列布局
+struct CompactMonthHeatMap: View {
+    let monthData: (month: Int, name: String, weeks: [[DayData]])
+    @Binding var selectedDate: Date?
+    @Binding var showDayDetail: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            // 月份标题
+            Text(monthData.name)
+                .font(.caption)
+                .fontWeight(.semibold)
+                .foregroundColor(.secondary)
+
+            // 该月的周热力图 - 紧凑布局
+            VStack(alignment: .leading, spacing: 1) {
+                ForEach(monthData.weeks.indices, id: \.self) { weekIndex in
+                    HStack(spacing: 1) {
+                        ForEach(monthData.weeks[weekIndex], id: \.id) { dayData in
+                            DayCell(dayData: dayData, size: 10)
+                                .onTapGesture {
+                                    if dayData.count > 0 {
+                                        selectedDate = dayData.date
+                                        showDayDetail = true
+                                    }
+                                }
+                        }
+                    }
+                }
+            }
+        }
+        .padding(6)
+        .background(
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Color(.systemBackground))
+                .shadow(color: .black.opacity(0.03), radius: 2, x: 0, y: 1)
+        )
     }
 }
 
@@ -469,6 +619,14 @@ struct DayDetailView: View {
     let date: Date
     @ObservedObject var viewModel: TimerViewModel
     @Environment(\.dismiss) var dismiss
+
+    // 静态 DateFormatter，避免重复创建
+    private static let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy年MM月dd日 EEEE"
+        formatter.locale = Locale(identifier: "zh_CN")
+        return formatter
+    }()
 
     private var daySolves: [Solve] {
         viewModel.getSolvesForDate(date)
@@ -524,11 +682,24 @@ struct DayDetailView: View {
     }
 
     private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy年MM月dd日 EEEE"
-        formatter.locale = Locale(identifier: "zh_CN")
-        return formatter.string(from: date)
+        return Self.dateFormatter.string(from: date)
     }
+}
+
+// MARK: - 分享视图控制器
+struct ActivityViewController: UIViewControllerRepresentable {
+    let activityItems: [Any]
+    let applicationActivities: [UIActivity]? = nil
+
+    func makeUIViewController(context: UIViewControllerRepresentableContext<ActivityViewController>) -> UIActivityViewController {
+        let controller = UIActivityViewController(
+            activityItems: activityItems,
+            applicationActivities: applicationActivities
+        )
+        return controller
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: UIViewControllerRepresentableContext<ActivityViewController>) {}
 }
 
 #Preview {

@@ -86,7 +86,7 @@ struct LocalAsyncImage: View {
     let imageName: String
     let content: (LocalAsyncImagePhase) -> AnyView
 
-    init<Content>(imageName: String, @ViewBuilder content: @escaping (LocalAsyncImagePhase) -> Content) where Content: View {
+    init(imageName: String, @ViewBuilder content: @escaping (LocalAsyncImagePhase) -> some View) {
         self.imageName = imageName
         self.content = { phase in AnyView(content(phase)) }
     }

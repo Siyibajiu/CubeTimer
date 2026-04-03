@@ -1,6 +1,6 @@
 import Foundation
 
-struct Solve: Identifiable, Codable {
+struct Solve: Identifiable, Codable, Equatable {
     let id = UUID()
     let date: Date
     let time: TimeInterval // 秒

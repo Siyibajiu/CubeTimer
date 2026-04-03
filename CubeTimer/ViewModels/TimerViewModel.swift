@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import UIKit
 
 class TimerViewModel: ObservableObject {
     @Published var currentTime: TimeInterval = 0
@@ -17,9 +18,54 @@ class TimerViewModel: ObservableObject {
     @Published var isReadyAfterInspection = false
     private var inspectionTimer: Timer?
 
+    // 复用DateFormatter，避免重复创建
+    private let dayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.timeZone = TimeZone.current
+        return formatter
+    }()
+
+    // 缓存统计数据
+    private var cachedAO5: TimeInterval?
+    private var cachedAO5Solves: [Solve]?
+    private var cachedAO12: TimeInterval?
+    private var cachedAO12Solves: [Solve]?
+
+    // Debounce 订阅，用于延迟写入
+    private var saveCancellable: AnyCancellable?
+    private let saveDebounceInterval: TimeInterval = 1.0 // 1秒延迟
+
     init() {
-        loadSolves()
         generateNewScramble()
+        loadSolves()
+        setupDebounceSave()
+
+        // 监听 App 生命周期事件
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(saveBeforeTerminate),
+            name: UIApplication.willResignActiveNotification,
+            object: nil
+        )
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    // 设置延迟保存
+    private func setupDebounceSave() {
+        saveCancellable = $solves
+            .debounce(for: .seconds(saveDebounceInterval), scheduler: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.saveSolves()
+            }
+    }
+
+    // App 进入后台时立即保存
+    @objc private func saveBeforeTerminate() {
+        saveSolves()
     }
 
     func start() {
@@ -28,10 +74,11 @@ class TimerViewModel: ObservableObject {
         isRunning = true
         startTime = Date()
 
-        timer = Timer.scheduledTimer(withTimeInterval: 0.01, repeats: true) { _ in
-            if let start = self.startTime {
-                self.currentTime = Date().timeIntervalSince(start)
-            }
+        // 使用 100ms 的 UI 更新间隔，平衡显示流畅度和性能
+        // 计时仍然准确（基于 Date() 计算），只是显示更新频率降低
+        timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+            guard let self = self, let start = self.startTime else { return }
+            self.currentTime = Date().timeIntervalSince(start)
         }
     }
 
@@ -91,8 +138,7 @@ class TimerViewModel: ObservableObject {
         // 添加到列表
         solves.insert(solve, at: 0)
 
-        // 保存到UserDefaults
-        saveSolves()
+        // 移除直接保存，由 debounce 自动处理
 
         // 重置计时器和观察状态
         stop()
@@ -119,9 +165,20 @@ class TimerViewModel: ObservableObject {
     }
 
     private func loadSolves() {
-        if let data = UserDefaults.standard.data(forKey: "solves"),
-           let decoded = try? JSONDecoder().decode([Solve].self, from: data) {
-            solves = decoded
+        // 完全异步加载数据，不阻塞
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            var decoded: [Solve]?
+
+            if let data = UserDefaults.standard.data(forKey: "solves") {
+                decoded = try? JSONDecoder().decode([Solve].self, from: data)
+            }
+
+            // 在主线程更新 UI
+            DispatchQueue.main.async {
+                if let decoded = decoded {
+                    self?.solves = decoded
+                }
+            }
         }
     }
 
@@ -132,29 +189,99 @@ class TimerViewModel: ObservableObject {
     func deleteSolve(_ solve: Solve) {
         if let index = solves.firstIndex(where: { $0.id == solve.id }) {
             solves.remove(at: index)
-            saveSolves()
+            // 移除直接保存，由 debounce 自动处理
         }
     }
 
-    // MARK: - 统计数据
+    // MARK: - 数据导出/导入
+    func exportData() -> URL? {
+        guard !solves.isEmpty else { return nil }
+
+        do {
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = .prettyPrinted
+            let data = try encoder.encode(solves)
+
+            let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            let fileURL = documentsPath.appendingPathComponent("CubeTimer_Backup_\(Date().timeIntervalSince1970).json")
+
+            try data.write(to: fileURL)
+            return fileURL
+        } catch {
+            print("导出失败: \(error)")
+            return nil
+        }
+    }
+
+    func importData(from url: URL) -> Bool {
+        do {
+            let data = try Data(contentsOf: url)
+            let decoded = try JSONDecoder().decode([Solve].self, from: data)
+
+            // 合并数据，保留原有数据
+            let existingIds = Set(solves.map { $0.id })
+            let newSolves = decoded.filter { !existingIds.contains($0.id) }
+
+            solves = newSolves + solves
+            // 导入操作立即保存（重要操作）
+            saveSolves()
+
+            return true
+        } catch {
+            print("导入失败: \(error)")
+            return false
+        }
+    }
+
+    // MARK: - 统计数据（优化性能）
     var pb: TimeInterval? {
         solves.map { $0.time }.min()
     }
 
     var ao5: TimeInterval? {
         guard solves.count >= 5 else { return nil }
+
+        // 检查缓存
+        if let cached = cachedAO5,
+           let cachedSolves = cachedAO5Solves,
+           Array(solves.prefix(5)) == cachedSolves {
+            return cached
+        }
+
+        // 计算AO5
         let recent5 = Array(solves.prefix(5))
         let times = recent5.map { $0.time }.sorted()
         let trimmed = times.dropFirst().dropLast()
-        return trimmed.reduce(0, +) / Double(trimmed.count)
+        let result = trimmed.reduce(0, +) / Double(trimmed.count)
+
+        // 更新缓存
+        cachedAO5 = result
+        cachedAO5Solves = recent5
+
+        return result
     }
 
     var ao12: TimeInterval? {
         guard solves.count >= 12 else { return nil }
+
+        // 检查缓存
+        if let cached = cachedAO12,
+           let cachedSolves = cachedAO12Solves,
+           Array(solves.prefix(12)) == cachedSolves {
+            return cached
+        }
+
+        // 计算AO12
         let recent12 = Array(solves.prefix(12))
         let times = recent12.map { $0.time }.sorted()
         let trimmed = times.dropFirst().dropLast()
-        return trimmed.reduce(0, +) / Double(trimmed.count)
+        let result = trimmed.reduce(0, +) / Double(trimmed.count)
+
+        // 更新缓存
+        cachedAO12 = result
+        cachedAO12Solves = recent12
+
+        return result
     }
 
     var average: TimeInterval? {
@@ -169,10 +296,7 @@ class TimerViewModel: ObservableObject {
 
         for solve in solves {
             let dayKey = calendar.startOfDay(for: solve.date)
-            let formatter = DateFormatter()
-            formatter.dateFormat = "yyyy-MM-dd"
-            formatter.timeZone = TimeZone.current  // 确保使用当前时区
-            let dayString = formatter.string(from: dayKey)
+            let dayString = dayFormatter.string(from: dayKey)
 
             if daySolves[dayString] == nil {
                 daySolves[dayString] = []
@@ -186,10 +310,7 @@ class TimerViewModel: ObservableObject {
     func getSolvesForDate(_ date: Date) -> [Solve] {
         let calendar = Calendar.current
         let targetDay = calendar.startOfDay(for: date)
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        formatter.timeZone = TimeZone.current
-        let targetString = formatter.string(from: targetDay)
+        let targetString = dayFormatter.string(from: targetDay)
 
         let daySolves = getSolvesByDay()
         return daySolves[targetString] ?? []
@@ -228,10 +349,7 @@ class TimerViewModel: ObservableObject {
         // 按日期分组
         for solve in solves {
             let dayKey = calendar.startOfDay(for: solve.date)
-            let formatter = DateFormatter()
-            formatter.dateFormat = "yyyy-MM-dd"
-            formatter.timeZone = TimeZone.current
-            let dayString = formatter.string(from: dayKey)
+            let dayString = dayFormatter.string(from: dayKey)
 
             if dailyData[dayString] == nil {
                 dailyData[dayString] = []

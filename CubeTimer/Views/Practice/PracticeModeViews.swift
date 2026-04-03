@@ -22,6 +22,7 @@ struct StudyModeView: View {
                                 .resizable()
                                 .aspectRatio(contentMode: .fit)
                                 .frame(height: 200)
+                                .rotationEffect(.degrees(formula.rotation))
                                 .clipped()
                         case .failure(_):
                             fallbackView
@@ -35,13 +36,6 @@ struct StudyModeView: View {
 
                 // 公式名称
                 Text(formula.name).font(.title2).fontWeight(.bold)
-
-                // 公式描述
-                Text(formula.description)
-                    .font(.body)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
 
                 // 算法显示/隐藏
                 VStack(spacing: 12) {
@@ -142,7 +136,7 @@ struct QuizModeView: View {
                         case .empty:
                             ProgressView().frame(width: 200, height: 200)
                         case .success(let image):
-                            image.resizable().aspectRatio(contentMode: .fit).frame(height: 180).clipped()
+                            image.resizable().aspectRatio(contentMode: .fit).frame(height: 180).rotationEffect(.degrees(formula.rotation)).clipped()
                         case .failure(_):
                             fallbackView
                         @unknown default:
@@ -248,7 +242,7 @@ struct InteractiveModeView: View {
                     case .empty:
                         ProgressView().frame(width: 120, height: 120)
                     case .success(let image):
-                        image.resizable().aspectRatio(contentMode: .fit).frame(height: 120).clipped()
+                        image.resizable().aspectRatio(contentMode: .fit).frame(height: 120).rotationEffect(.degrees(formula.rotation)).clipped()
                     case .failure(_):
                         fallbackView
                     @unknown default:
